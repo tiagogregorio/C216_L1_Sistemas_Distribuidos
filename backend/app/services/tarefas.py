@@ -1,6 +1,15 @@
-"""Regras de negocio de tarefas, isoladas da camada HTTP."""
+"""Regras de negocio e armazenamento em memoria das tarefas."""
+
+from app.schemas.tarefa import TarefaCreate, TarefaUpdate
 
 PRIORIDADES_VALIDAS = ("baixa", "media", "alta")
+
+_tarefas: dict[int, dict] = {}
+_proximo_id = 1
+
+
+class TarefaNaoEncontradaError(Exception):
+    """Levantada quando o identificador informado nao existe."""
 
 
 def normalizar_titulo(titulo: str) -> str:
@@ -44,3 +53,79 @@ def resumir_tarefas(tarefas: list[dict]) -> dict:
         "concluidas": concluidas,
         "progresso": calcular_progresso(total, concluidas),
     }
+
+
+def resetar() -> None:
+    """Limpa o armazenamento em memoria e reinicia o contador de ids."""
+    global _proximo_id
+    _tarefas.clear()
+    _proximo_id = 1
+
+
+def listar(status: str | None = None) -> list[dict]:
+    """Lista as tarefas, opcionalmente filtrando por status."""
+    tarefas = list(_tarefas.values())
+    if status is None:
+        return tarefas
+    return [tarefa for tarefa in tarefas if tarefa["status"] == status]
+
+
+def buscar(tarefa_id: int) -> dict:
+    """Retorna uma tarefa pelo id."""
+    if tarefa_id not in _tarefas:
+        raise TarefaNaoEncontradaError(f"Tarefa {tarefa_id} nao encontrada.")
+    return _tarefas[tarefa_id]
+
+
+def criar(dados: TarefaCreate) -> dict:
+    """Cria uma tarefa e devolve o registro criado."""
+    global _proximo_id
+    tarefa = {
+        "id": _proximo_id,
+        "titulo": normalizar_titulo(dados.titulo),
+        "prioridade": validar_prioridade(dados.prioridade),
+        "status": dados.status,
+    }
+    _tarefas[_proximo_id] = tarefa
+    _proximo_id += 1
+    return tarefa
+
+
+def substituir(tarefa_id: int, dados: TarefaCreate) -> dict:
+    """Substitui todos os campos de uma tarefa existente."""
+    buscar(tarefa_id)
+    tarefa = {
+        "id": tarefa_id,
+        "titulo": normalizar_titulo(dados.titulo),
+        "prioridade": validar_prioridade(dados.prioridade),
+        "status": dados.status,
+    }
+    _tarefas[tarefa_id] = tarefa
+    return tarefa
+
+
+def atualizar(tarefa_id: int, dados: TarefaUpdate) -> dict:
+    """Atualiza apenas os campos enviados de uma tarefa existente."""
+    tarefa = buscar(tarefa_id).copy()
+    alteracoes = dados.model_dump(exclude_unset=True)
+
+    if "titulo" in alteracoes:
+        tarefa["titulo"] = normalizar_titulo(alteracoes["titulo"])
+    if "prioridade" in alteracoes:
+        tarefa["prioridade"] = validar_prioridade(alteracoes["prioridade"])
+    if "status" in alteracoes:
+        tarefa["status"] = alteracoes["status"]
+
+    _tarefas[tarefa_id] = tarefa
+    return tarefa
+
+
+def remover(tarefa_id: int) -> None:
+    """Remove uma tarefa existente."""
+    buscar(tarefa_id)
+    del _tarefas[tarefa_id]
+
+
+def resumo() -> dict:
+    """Devolve o resumo agregado das tarefas armazenadas."""
+    return resumir_tarefas(list(_tarefas.values()))
