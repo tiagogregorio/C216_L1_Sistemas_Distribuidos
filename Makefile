@@ -1,4 +1,5 @@
 POETRY = poetry
+COMPOSE ?= docker compose
 
 .PHONY: help install run test test-fast lint lint-fix format format-check check up down down-v build restart logs back-sh db-sh clean
 
@@ -27,7 +28,7 @@ install:
 	cd backend && $(POETRY) install
 
 run:
-	cd backend && $(POETRY) run uvicorn main:app --reload
+	cd backend && $(POETRY) run uvicorn app.main:app --reload
 
 test:
 	cd backend && $(POETRY) run pytest
@@ -50,28 +51,28 @@ format-check:
 check: lint format-check test
 
 up:
-	docker compose up -d
+	$(COMPOSE) up -d
 
 down:
-	docker compose down
+	$(COMPOSE) down
 
 down-v:
-	docker compose down -v
+	$(COMPOSE) down -v
 
 build:
-	docker compose up -d --build
+	$(COMPOSE) up -d --build
 
 restart:
-	docker compose restart
+	$(COMPOSE) restart
 
 logs:
-	docker compose logs -f backend
+	$(COMPOSE) logs -f backend
 
 back-sh:
-	docker compose exec backend sh
+	$(COMPOSE) exec backend sh
 
 db-sh:
-	docker compose exec db psql -U postgres -d sistemas_distribuidos
+	$(COMPOSE) exec db psql -U postgres -d sistemas_distribuidos
 
 clean:
 	find . -type d -name "__pycache__" -exec rm -rf {} +
