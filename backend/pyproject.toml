@@ -1,7 +1,7 @@
 [project]
 name = "backend"
 version = "0.1.0"
-description = "Backend da Pratica 1 do laboratorio de Sistemas Distribuidos, com FastAPI"
+description = "Backend do laboratorio de Sistemas Distribuidos, com FastAPI"
 authors = [
     {name = "Tiago R. Gregorio",email = "trgtiago@hotmail.com"}
 ]
@@ -21,6 +21,23 @@ build-backend = "poetry.core.masonry.api"
 [dependency-groups]
 dev = [
     "pytest (>=9.1.1,<10.0.0)",
-    "httpx (>=0.28.1,<0.29.0)",
-    "ruff (>=0.16.3,<0.17.0)"
+    "ruff (>=0.16.3,<0.17.0)",
+    "httpx2 (>=2.13.0,<3.0.0)"
 ]
+
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+pythonpath = ["."]
+addopts = "-v"
+
+[tool.ruff]
+line-length = 88
+target-version = "py312"
+src = ["."]
+
+[tool.ruff.lint]
+select = ["E", "F", "I", "B", "UP", "SIM"]
+
+[tool.ruff.format]
+quote-style = "double"
