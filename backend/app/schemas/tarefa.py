@@ -2,7 +2,7 @@
 
 from typing import Literal
 
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, ConfigDict, Field
 
 Prioridade = Literal["baixa", "media", "alta"]
 StatusTarefa = Literal["pendente", "concluida"]
@@ -30,5 +30,7 @@ class TarefaUpdate(BaseModel):
 
 class TarefaResponse(TarefaBase):
     """Representacao devolvida pela API."""
+
+    model_config = ConfigDict(from_attributes=True)
 
     id: int
