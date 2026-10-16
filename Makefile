@@ -1,7 +1,7 @@
 POETRY = poetry
 COMPOSE ?= docker compose
 
-.PHONY: help install run test test-fast lint lint-fix format format-check check up down down-v build restart logs back-sh db-sh clean
+.PHONY: help install run test test-fast lint lint-fix format format-check check up down down-v build restart logs back-sh db-sh clean db-upgrade db-migration db-current
 
 help:
 	@echo "Comandos disponiveis:"
@@ -23,6 +23,9 @@ help:
 	@echo "  make back-sh      - abre um shell dentro do container do backend"
 	@echo "  make db-sh        - abre o psql dentro do container do banco"
 	@echo "  make clean        - remove cache e arquivos temporarios do Python"
+	@echo "  make db-upgrade   - aplica as migrations pendentes no banco"
+	@echo "  make db-migration - gera uma nova migration (use msg='descricao')"
+	@echo "  make db-current   - mostra a versao atual do banco"
 
 install:
 	cd backend && $(POETRY) install
@@ -73,6 +76,15 @@ back-sh:
 
 db-sh:
 	$(COMPOSE) exec db psql -U postgres -d sistemas_distribuidos
+
+db-upgrade:
+	$(COMPOSE) exec backend alembic upgrade head
+
+db-migration:
+	$(COMPOSE) exec backend alembic revision --autogenerate -m "$(msg)"
+
+db-current:
+	$(COMPOSE) exec backend alembic current
 
 clean:
 	find . -type d -name "__pycache__" -exec rm -rf {} +
