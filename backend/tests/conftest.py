@@ -1,33 +1,39 @@
+"""Fixtures compartilhadas por todos os testes."""
+
 import pytest
 from fastapi.testclient import TestClient
+from sqlalchemy import create_engine
+from sqlalchemy.orm import sessionmaker
+from sqlalchemy.pool import StaticPool
 
+from app.database.base import Base
+from app.database.session import get_db
 from app.main import app
-from app.services import tarefas as servico
-
-
-@pytest.fixture(autouse=True)
-def armazenamento_limpo():
-    """Zera o armazenamento em memoria antes e depois de cada teste."""
-    servico.resetar()
-    yield
-    servico.resetar()
 
 
 @pytest.fixture
-def client() -> TestClient:
-    """Cliente HTTP de teste usado nos testes de integracao."""
-    return TestClient(app)
+def client():
+    """Client com banco SQLite em memoria, isolado por teste."""
+    engine = create_engine(
+        "sqlite://",
+        connect_args={"check_same_thread": False},
+        poolclass=StaticPool,
+    )
+    Base.metadata.create_all(engine)
+    TestingSession = sessionmaker(bind=engine, autoflush=False)
 
+    def override_get_db():
+        db = TestingSession()
+        try:
+            yield db
+        finally:
+            db.close()
 
-@pytest.fixture
-def tarefas_exemplo() -> list[dict]:
-    """Massa de dados mocada, usada pelos testes unitarios."""
-    return [
-        {"id": 1, "titulo": "Estudar pytest", "status": "concluida"},
-        {"id": 2, "titulo": "Configurar CI", "status": "pendente"},
-        {"id": 3, "titulo": "Abrir PR", "status": "concluida"},
-        {"id": 4, "titulo": "Revisar codigo", "status": "pendente"},
-    ]
+    app.dependency_overrides[get_db] = override_get_db
+    with TestClient(app) as test_client:
+        yield test_client
+    app.dependency_overrides.clear()
+    engine.dispose()
 
 
 @pytest.fixture

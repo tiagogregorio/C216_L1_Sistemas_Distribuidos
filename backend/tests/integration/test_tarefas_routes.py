@@ -54,7 +54,7 @@ def test_buscar_tarefa_inexistente_retorna_404(client):
     resposta = client.get("/tarefas/999")
 
     assert resposta.status_code == status.HTTP_404_NOT_FOUND
-    assert "999" in resposta.json()["detail"]
+    assert resposta.json()["detail"] == "Tarefa nao encontrada"
 
 
 def test_listar_com_filtro_de_status(client):
