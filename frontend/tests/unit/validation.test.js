@@ -1,33 +1,45 @@
 import { describe, expect, it } from "vitest";
-import { NAME_MAX_LENGTH, validateItem } from "../../src/validation";
+import { TITULO_MAX, TITULO_MIN, validateTarefa } from "../../src/validation";
 
-describe("validateItem", () => {
-  it("rejeita nome vazio ou só com espaços", () => {
-    const { errors } = validateItem({ name: "   ", description: "" });
-    expect(errors.name).toBe("O nome é obrigatório.");
+describe("validateTarefa", () => {
+  it("rejeita título vazio ou só com espaços", () => {
+    const { errors } = validateTarefa({ titulo: "   ", prioridade: "media" });
+    expect(errors.titulo).toBe("O título é obrigatório.");
   });
 
-  it("rejeita nome com mais de 100 caracteres", () => {
-    const longName = "a".repeat(NAME_MAX_LENGTH + 1);
-    const { errors } = validateItem({ name: longName, description: "" });
-    expect(errors.name).toBe(
-      `O nome deve ter no máximo ${NAME_MAX_LENGTH} caracteres.`,
+  it("rejeita título com menos de 3 caracteres", () => {
+    const { errors } = validateTarefa({ titulo: "ab", prioridade: "media" });
+    expect(errors.titulo).toBe(
+      `O título deve ter no mínimo ${TITULO_MIN} caracteres.`,
     );
   });
 
-  it("aceita nome válido e faz trim nos valores", () => {
-    const { errors, values } = validateItem({
-      name: "  Notebook  ",
-      description: "  14 polegadas  ",
+  it("rejeita título com mais de 80 caracteres", () => {
+    const longTitle = "a".repeat(TITULO_MAX + 1);
+    const { errors } = validateTarefa({
+      titulo: longTitle,
+      prioridade: "media",
     });
-    expect(Object.keys(errors)).toHaveLength(0);
-    expect(values.name).toBe("Notebook");
-    expect(values.description).toBe("14 polegadas");
+    expect(errors.titulo).toBe(
+      `O título deve ter no máximo ${TITULO_MAX} caracteres.`,
+    );
   });
 
-  it("aceita descrição vazia", () => {
-    const { errors, values } = validateItem({ name: "Item", description: "" });
+  it("aceita título válido e faz trim", () => {
+    const { errors, values } = validateTarefa({
+      titulo: "  Estudar SQLAlchemy  ",
+      prioridade: "alta",
+    });
     expect(Object.keys(errors)).toHaveLength(0);
-    expect(values.description).toBe("");
+    expect(values.titulo).toBe("Estudar SQLAlchemy");
+    expect(values.prioridade).toBe("alta");
+  });
+
+  it("rejeita prioridade inválida", () => {
+    const { errors } = validateTarefa({
+      titulo: "Tarefa",
+      prioridade: "urgente",
+    });
+    expect(errors.prioridade).toBe("Prioridade inválida.");
   });
 });
