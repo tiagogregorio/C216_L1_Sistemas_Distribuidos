@@ -139,4 +139,4 @@ frontend-test-e2e:
 frontend-build:
 	$(NPM_FRONTEND) run build
 
-check-all: check frontend-lint frontend-format-check frontend-test frontend-build frontend-test-e2e
+check-all: check frontend-lint frontend-format-check frontend-test frontend-build

@@ -1,17 +1,23 @@
-export const NAME_MAX_LENGTH = 100;
+export const TITULO_MIN = 3;
+export const TITULO_MAX = 80;
+export const PRIORIDADES = ["baixa", "media", "alta"];
+export const STATUS_OPTIONS = ["pendente", "concluida"];
 
-export function validateItem({ name, description }) {
+export function validateTarefa({ titulo, prioridade }) {
   const errors = {};
-  const trimmedName = name.trim();
+  const trimmed = titulo.trim();
 
-  if (!trimmedName) {
-    errors.name = "O nome é obrigatório.";
-  } else if (trimmedName.length > NAME_MAX_LENGTH) {
-    errors.name = `O nome deve ter no máximo ${NAME_MAX_LENGTH} caracteres.`;
+  if (!trimmed) {
+    errors.titulo = "O título é obrigatório.";
+  } else if (trimmed.length < TITULO_MIN) {
+    errors.titulo = `O título deve ter no mínimo ${TITULO_MIN} caracteres.`;
+  } else if (trimmed.length > TITULO_MAX) {
+    errors.titulo = `O título deve ter no máximo ${TITULO_MAX} caracteres.`;
   }
 
-  return {
-    errors,
-    values: { name: trimmedName, description: description.trim() },
-  };
+  if (!PRIORIDADES.includes(prioridade)) {
+    errors.prioridade = "Prioridade inválida.";
+  }
+
+  return { errors, values: { titulo: trimmed, prioridade } };
 }

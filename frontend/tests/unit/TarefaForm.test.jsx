@@ -1,18 +1,18 @@
 import { render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { describe, expect, it, vi } from "vitest";
-import { ItemForm } from "../../src/components/ItemForm";
+import { TarefaForm } from "../../src/components/TarefaForm";
 
-describe("ItemForm", () => {
-  it("mostra erro e não chama onAdd com nome vazio", async () => {
+describe("TarefaForm", () => {
+  it("mostra erro e não chama onAdd com título vazio", async () => {
     const user = userEvent.setup();
     const onAdd = vi.fn();
-    render(<ItemForm onAdd={onAdd} />);
+    render(<TarefaForm onAdd={onAdd} loading={false} />);
 
     await user.click(screen.getByRole("button", { name: "Adicionar" }));
 
     expect(screen.getByRole("alert")).toHaveTextContent(
-      "O nome é obrigatório.",
+      "O título é obrigatório.",
     );
     expect(onAdd).not.toHaveBeenCalled();
   });
@@ -20,17 +20,15 @@ describe("ItemForm", () => {
   it("chama onAdd com os valores e limpa o formulário", async () => {
     const user = userEvent.setup();
     const onAdd = vi.fn();
-    render(<ItemForm onAdd={onAdd} />);
+    render(<TarefaForm onAdd={onAdd} loading={false} />);
 
-    await user.type(screen.getByLabelText("Nome"), "Notebook");
-    await user.type(screen.getByLabelText("Descrição"), "14 polegadas");
+    await user.type(screen.getByLabelText("Título"), "Estudar SQLAlchemy");
     await user.click(screen.getByRole("button", { name: "Adicionar" }));
 
     expect(onAdd).toHaveBeenCalledWith({
-      name: "Notebook",
-      description: "14 polegadas",
+      titulo: "Estudar SQLAlchemy",
+      prioridade: "media",
     });
-    expect(screen.getByLabelText("Nome")).toHaveValue("");
-    expect(screen.getByLabelText("Descrição")).toHaveValue("");
+    expect(screen.getByLabelText("Título")).toHaveValue("");
   });
 });

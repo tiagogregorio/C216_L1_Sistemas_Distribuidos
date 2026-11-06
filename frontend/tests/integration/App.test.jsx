@@ -1,52 +1,94 @@
-import { render, screen } from "@testing-library/react";
+import { render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
-import { describe, expect, it } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import App from "../../src/App";
+import * as api from "../../src/services/tarefas";
 
-describe("App — formulário + listagem", () => {
-  it("exibe mensagem vazia ao iniciar", () => {
-    render(<App />);
-    expect(screen.getByText("Nenhum item cadastrado.")).toBeInTheDocument();
+vi.mock("../../src/services/tarefas");
+
+const tarefaMock = {
+  id: 1,
+  titulo: "Estudar SQLAlchemy",
+  prioridade: "alta",
+  status: "pendente",
+};
+
+describe("App — integração com API mockada", () => {
+  beforeEach(() => {
+    api.listarTarefas.mockResolvedValue([]);
   });
 
-  it("cadastra um item e o exibe na lista", async () => {
+  afterEach(() => {
+    vi.restoreAllMocks();
+  });
+
+  it("exibe mensagem vazia quando a API retorna lista vazia", async () => {
+    render(<App />);
+    await waitFor(() => {
+      expect(
+        screen.getByText("Nenhuma tarefa cadastrada."),
+      ).toBeInTheDocument();
+    });
+  });
+
+  it("exibe tarefas retornadas pela API", async () => {
+    api.listarTarefas.mockResolvedValue([tarefaMock]);
+    render(<App />);
+    await waitFor(() => {
+      expect(screen.getByText("Estudar SQLAlchemy")).toBeInTheDocument();
+    });
+  });
+
+  it("cria uma tarefa e a exibe na lista", async () => {
+    const user = userEvent.setup();
+    api.criarTarefa.mockResolvedValue(tarefaMock);
+    render(<App />);
+
+    await waitFor(() => {
+      expect(
+        screen.getByText("Nenhuma tarefa cadastrada."),
+      ).toBeInTheDocument();
+    });
+
+    await user.type(screen.getByLabelText("Título"), "Estudar SQLAlchemy");
+    await user.click(screen.getByRole("button", { name: "Adicionar" }));
+
+    await waitFor(() => {
+      expect(screen.getByText("Estudar SQLAlchemy")).toBeInTheDocument();
+    });
+    expect(api.criarTarefa).toHaveBeenCalledWith({
+      titulo: "Estudar SQLAlchemy",
+      prioridade: "media",
+    });
+  });
+
+  it("remove uma tarefa da lista", async () => {
+    api.listarTarefas.mockResolvedValue([tarefaMock]);
+    api.removerTarefa.mockResolvedValue(null);
     const user = userEvent.setup();
     render(<App />);
 
-    await user.type(screen.getByLabelText("Nome"), "Notebook");
-    await user.type(screen.getByLabelText("Descrição"), "14 polegadas");
-    await user.click(screen.getByRole("button", { name: "Adicionar" }));
+    await waitFor(() => {
+      expect(screen.getByText("Estudar SQLAlchemy")).toBeInTheDocument();
+    });
 
-    expect(screen.getByText("Notebook")).toBeInTheDocument();
-    expect(screen.getByText("14 polegadas")).toBeInTheDocument();
-    expect(
-      screen.queryByText("Nenhum item cadastrado."),
-    ).not.toBeInTheDocument();
+    await user.click(screen.getByRole("button", { name: "Excluir" }));
+
+    await waitFor(() => {
+      expect(
+        screen.getByText("Nenhuma tarefa cadastrada."),
+      ).toBeInTheDocument();
+    });
   });
 
-  it("cadastra múltiplos itens", async () => {
-    const user = userEvent.setup();
+  it("exibe mensagem de erro quando a API falha", async () => {
+    api.listarTarefas.mockRejectedValue(new Error("Network Error"));
     render(<App />);
 
-    await user.type(screen.getByLabelText("Nome"), "Item 1");
-    await user.click(screen.getByRole("button", { name: "Adicionar" }));
-
-    await user.type(screen.getByLabelText("Nome"), "Item 2");
-    await user.click(screen.getByRole("button", { name: "Adicionar" }));
-
-    const listItems = screen.getAllByRole("listitem");
-    expect(listItems).toHaveLength(2);
-  });
-
-  it("não cadastra item com nome vazio", async () => {
-    const user = userEvent.setup();
-    render(<App />);
-
-    await user.click(screen.getByRole("button", { name: "Adicionar" }));
-
-    expect(screen.getByRole("alert")).toHaveTextContent(
-      "O nome é obrigatório.",
-    );
-    expect(screen.getByText("Nenhum item cadastrado.")).toBeInTheDocument();
+    await waitFor(() => {
+      expect(screen.getByRole("alert")).toHaveTextContent(
+        "Falha ao carregar tarefas",
+      );
+    });
   });
 });
