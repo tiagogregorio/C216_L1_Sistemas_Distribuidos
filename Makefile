@@ -1,15 +1,15 @@
 COMPOSE = docker compose
 
 .PHONY: help up down down-v build restart logs \
-        back-sh db-sh db-upgrade db-downgrade db-history \
-        seed test lint format check-all clean
+        back-sh db-sh front-sh db-upgrade db-downgrade db-history \
+        seed test test-back test-front lint format check-all clean
 
 help: ## Mostra os comandos disponiveis
 	@grep -E '^[a-zA-Z_-]+:.*?## .*$$' $(MAKEFILE_LIST) | \
 		awk 'BEGIN {FS = ":.*?## "}; {printf "  \033[36m%-18s\033[0m %s\n", $$1, $$2}'
 
 # === Docker ===
-up: ## Sobe os containers (db + backend)
+up: ## Sobe os containers (db + backend + frontend)
 	$(COMPOSE) up -d --build
 
 down: ## Para os containers
@@ -34,6 +34,9 @@ back-sh: ## Abre shell no backend
 db-sh: ## Abre psql no banco
 	$(COMPOSE) exec db psql -U postgres -d enade_platform
 
+front-sh: ## Abre shell no frontend
+	$(COMPOSE) exec frontend sh
+
 # === Banco de dados ===
 db-upgrade: ## Aplica migracoes pendentes
 	$(COMPOSE) exec backend alembic upgrade head
@@ -49,13 +52,21 @@ seed: ## Popula o banco com questoes do ENADE
 	$(COMPOSE) exec backend python -m app.seed
 
 # === Qualidade ===
-test: ## Roda testes do backend
+test: test-back test-front ## Roda todos os testes
+
+test-back: ## Roda testes do backend
 	$(COMPOSE) exec backend pytest
 
-lint: ## Verifica lint com ruff
-	$(COMPOSE) exec backend ruff check .
+test-front: ## Roda testes do frontend
+	$(COMPOSE) exec frontend sh -c "cd /app && npx vitest run" 2>/dev/null || \
+		cd frontend && npx vitest run
 
-format: ## Formata codigo com ruff
+lint: ## Verifica lint com ruff (backend) e biome (frontend)
+	$(COMPOSE) exec backend ruff check .
+	cd frontend && npx @biomejs/biome check src/
+
+format: ## Formata codigo
 	$(COMPOSE) exec backend ruff format .
+	cd frontend && npx @biomejs/biome format --write src/
 
 check-all: lint test ## Roda lint e testes

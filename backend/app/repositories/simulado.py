@@ -1,8 +1,9 @@
 """Acesso ao banco para os recursos simulado e resposta."""
 
-from sqlalchemy import func, select
+from sqlalchemy import case, func, select
 from sqlalchemy.orm import Session
 
+from app.models.questao import Questao
 from app.models.resposta import Resposta
 from app.models.simulado import Simulado
 
@@ -66,9 +67,8 @@ class SimuladoRepository:
 
     def media_nota(self) -> float | None:
         """Retorna a media das notas dos simulados finalizados."""
-        consulta = (
-            select(func.avg(Simulado.nota))
-            .where(Simulado.finalizado.is_(True))
+        consulta = select(func.avg(Simulado.nota)).where(
+            Simulado.finalizado.is_(True)
         )
         resultado = self.db.scalar(consulta)
         return round(resultado, 2) if resultado is not None else None
@@ -87,15 +87,13 @@ class SimuladoRepository:
 
     def desempenho_por_ano(self) -> list[dict]:
         """Agrupa acertos e total de respostas por ano da questao."""
-        from app.models.questao import Questao
+        soma_acertos = func.sum(case((Resposta.correta.is_(True), 1), else_=0))
 
         consulta = (
             select(
                 Questao.ano,
                 func.count(Resposta.id).label("total"),
-                func.sum(
-                    func.cast(Resposta.correta, type_=func.coalesce.type)
-                ).label("acertos"),
+                soma_acertos.label("acertos"),
             )
             .join(Questao, Resposta.questao_id == Questao.id)
             .where(Resposta.correta.is_not(None))
@@ -118,15 +116,13 @@ class SimuladoRepository:
 
     def desempenho_por_tipo(self) -> list[dict]:
         """Agrupa acertos e total de respostas por tipo (FG/CE)."""
-        from app.models.questao import Questao
+        soma_acertos = func.sum(case((Resposta.correta.is_(True), 1), else_=0))
 
         consulta = (
             select(
                 Questao.tipo,
                 func.count(Resposta.id).label("total"),
-                func.sum(
-                    func.cast(Resposta.correta, type_=func.coalesce.type)
-                ).label("acertos"),
+                soma_acertos.label("acertos"),
             )
             .join(Questao, Resposta.questao_id == Questao.id)
             .where(Resposta.correta.is_not(None))
