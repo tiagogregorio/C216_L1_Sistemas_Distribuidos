@@ -35,6 +35,7 @@ class SimuladoService:
             quantidade=dados.quantidade,
             ano=dados.ano,
             tipo=dados.tipo,
+            dificuldade=dados.dificuldade,
         )
 
         if len(questoes) < dados.quantidade:
@@ -84,6 +85,7 @@ class SimuladoService:
                     "questao_id": resp.questao_id,
                     "alternativa_escolhida": resp.alternativa_escolhida.upper(),
                     "correta": correta,
+                    "tempo_resposta": resp.tempo_resposta,
                 }
             )
 

@@ -19,6 +19,7 @@ class QuestaoBase(BaseModel):
     alternativa_e: str = Field(min_length=1)
     resposta: str = Field(pattern=r"^[A-E]$")
     assunto: str | None = Field(default=None, max_length=100)
+    dificuldade: str | None = Field(default=None, pattern=r"^(facil|medio|dificil)$")
 
 
 class QuestaoCreate(QuestaoBase):
@@ -39,6 +40,7 @@ class QuestaoUpdate(BaseModel):
     alternativa_e: str | None = Field(default=None, min_length=1)
     resposta: str | None = Field(default=None, pattern=r"^[A-E]$")
     assunto: str | None = Field(default=None, max_length=100)
+    dificuldade: str | None = Field(default=None, pattern=r"^(facil|medio|dificil)$")
 
 
 class QuestaoResponse(QuestaoBase):
@@ -59,3 +61,4 @@ class QuestaoResumo(BaseModel):
     numero: int
     tipo: str
     assunto: str | None
+    dificuldade: str | None

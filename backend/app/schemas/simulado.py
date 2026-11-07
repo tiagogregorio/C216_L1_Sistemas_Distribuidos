@@ -12,6 +12,7 @@ class SimuladoCreate(BaseModel):
     quantidade: int = Field(ge=1, le=50, default=10)
     ano: int | None = Field(default=None, ge=2004, le=2030)
     tipo: str | None = Field(default=None, pattern=r"^(FG|CE)$")
+    dificuldade: str | None = Field(default=None, pattern=r"^(facil|medio|dificil)$")
 
 
 class RespostaSubmit(BaseModel):
@@ -19,6 +20,7 @@ class RespostaSubmit(BaseModel):
 
     questao_id: int
     alternativa_escolhida: str = Field(pattern=r"^[A-E]$")
+    tempo_resposta: float | None = Field(default=None, ge=0)
 
 
 class SimuladoSubmit(BaseModel):
@@ -36,6 +38,7 @@ class RespostaResponse(BaseModel):
     questao_id: int
     alternativa_escolhida: str | None
     correta: bool | None
+    tempo_resposta: float | None
 
 
 class SimuladoResponse(BaseModel):

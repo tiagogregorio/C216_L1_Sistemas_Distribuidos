@@ -38,6 +38,7 @@ class SimuladoRepository:
                 questao_id=r["questao_id"],
                 alternativa_escolhida=r["alternativa_escolhida"],
                 correta=r["correta"],
+                tempo_resposta=r.get("tempo_resposta"),
             )
             self.db.add(resp)
             objetos.append(resp)

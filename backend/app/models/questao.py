@@ -23,3 +23,4 @@ class Questao(Base):
     alternativa_e: Mapped[str] = mapped_column(Text)
     resposta: Mapped[str] = mapped_column(String(1))
     assunto: Mapped[str | None] = mapped_column(String(100), nullable=True)
+    dificuldade: Mapped[str | None] = mapped_column(String(10), nullable=True)

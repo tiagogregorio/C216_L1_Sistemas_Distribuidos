@@ -27,6 +27,7 @@ class QuestaoRepository:
         ano: int | None = None,
         tipo: str | None = None,
         assunto: str | None = None,
+        dificuldade: str | None = None,
     ) -> list[Questao]:
         consulta = select(Questao).order_by(Questao.ano, Questao.numero)
         if ano is not None:
@@ -35,6 +36,8 @@ class QuestaoRepository:
             consulta = consulta.where(Questao.tipo == tipo)
         if assunto is not None:
             consulta = consulta.where(Questao.assunto.ilike(f"%{assunto}%"))
+        if dificuldade is not None:
+            consulta = consulta.where(Questao.dificuldade == dificuldade)
         return list(self.db.scalars(consulta))
 
     def listar_aleatorio(
@@ -42,6 +45,7 @@ class QuestaoRepository:
         quantidade: int,
         ano: int | None = None,
         tipo: str | None = None,
+        dificuldade: str | None = None,
     ) -> list[Questao]:
         """Retorna questoes aleatorias com filtros opcionais."""
         consulta = select(Questao)
@@ -49,6 +53,8 @@ class QuestaoRepository:
             consulta = consulta.where(Questao.ano == ano)
         if tipo is not None:
             consulta = consulta.where(Questao.tipo == tipo)
+        if dificuldade is not None:
+            consulta = consulta.where(Questao.dificuldade == dificuldade)
         consulta = consulta.order_by(func.random()).limit(quantidade)
         return list(self.db.scalars(consulta))
 

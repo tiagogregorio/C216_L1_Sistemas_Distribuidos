@@ -18,6 +18,7 @@ class Resposta(Base):
         String(1), nullable=True
     )
     correta: Mapped[bool | None] = mapped_column(nullable=True)
+    tempo_resposta: Mapped[float | None] = mapped_column(nullable=True)
 
     simulado: Mapped["Simulado"] = relationship(back_populates="respostas")
 

@@ -33,6 +33,18 @@ def validar_resposta(resposta: str) -> str:
     return valor
 
 
+def validar_dificuldade(dificuldade: str | None) -> str | None:
+    """Garante que a dificuldade seja facil, medio ou dificil."""
+    if dificuldade is None:
+        return None
+    valor = dificuldade.strip().lower()
+    if valor not in ("facil", "medio", "dificil"):
+        raise ValueError(
+            f"Dificuldade invalida: {dificuldade}. Use facil, medio ou dificil."
+        )
+    return valor
+
+
 class QuestaoService:
     """Orquestra as regras de negocio usando o repositorio."""
 
@@ -44,6 +56,7 @@ class QuestaoService:
         campos["enunciado"] = normalizar_enunciado(campos["enunciado"])
         campos["tipo"] = validar_tipo(campos["tipo"])
         campos["resposta"] = validar_resposta(campos["resposta"])
+        campos["dificuldade"] = validar_dificuldade(campos.get("dificuldade"))
         return self.repositorio.criar(campos)
 
     def buscar(self, questao_id: int) -> Questao:
@@ -59,8 +72,11 @@ class QuestaoService:
         ano: int | None = None,
         tipo: str | None = None,
         assunto: str | None = None,
+        dificuldade: str | None = None,
     ) -> list[Questao]:
-        return self.repositorio.listar(ano=ano, tipo=tipo, assunto=assunto)
+        return self.repositorio.listar(
+            ano=ano, tipo=tipo, assunto=assunto, dificuldade=dificuldade
+        )
 
     def atualizar(self, questao_id: int, dados: QuestaoUpdate) -> Questao:
         questao = self.buscar(questao_id)
@@ -73,6 +89,8 @@ class QuestaoService:
             alteracoes["tipo"] = validar_tipo(enviados["tipo"])
         if "resposta" in enviados:
             alteracoes["resposta"] = validar_resposta(enviados["resposta"])
+        if "dificuldade" in enviados:
+            alteracoes["dificuldade"] = validar_dificuldade(enviados["dificuldade"])
 
         for campo in (
             "ano",
