@@ -1,0 +1,40 @@
+name: Backend CI
+
+on:
+  push:
+    branches: [main, projeto-final]
+    paths: [backend/**]
+  pull_request:
+    branches: [main]
+    paths: [backend/**]
+
+jobs:
+  lint:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Instala dependencias
+        run: |
+          pip install poetry
+          cd backend && poetry install --no-interaction
+      - name: Ruff lint
+        run: cd backend && poetry run ruff check .
+      - name: Ruff format check
+        run: cd backend && poetry run ruff format --check .
+
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Instala dependencias
+        run: |
+          pip install poetry
+          cd backend && poetry install --no-interaction
+      - name: Pytest
+        run: cd backend && poetry run pytest -v
