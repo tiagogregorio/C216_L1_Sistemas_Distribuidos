@@ -1,45 +1,5 @@
 """Testes de integracao dos endpoints de simulados."""
 
-import pytest
-from fastapi.testclient import TestClient
-from sqlalchemy import create_engine
-from sqlalchemy.orm import sessionmaker
-from sqlalchemy.pool import StaticPool
-
-from app.database.base import Base
-from app.database.session import get_db
-from app.main import app
-
-SQLALCHEMY_DATABASE_URL = "sqlite:///./test_sim.db"
-
-engine = create_engine(
-    SQLALCHEMY_DATABASE_URL,
-    connect_args={"check_same_thread": False},
-    poolclass=StaticPool,
-)
-TestingSessionLocal = sessionmaker(bind=engine)
-
-
-def override_get_db():
-    db = TestingSessionLocal()
-    try:
-        yield db
-    finally:
-        db.close()
-
-
-app.dependency_overrides[get_db] = override_get_db
-
-
-@pytest.fixture(autouse=True)
-def setup_db():
-    Base.metadata.create_all(bind=engine)
-    yield
-    Base.metadata.drop_all(bind=engine)
-
-
-client = TestClient(app)
-
 QUESTAO = {
     "ano": 2019,
     "numero": 1,
@@ -55,7 +15,7 @@ QUESTAO = {
 }
 
 
-def criar_questoes(n=5):
+def criar_questoes(client, n=5):
     ids = []
     for i in range(n):
         q = {**QUESTAO, "numero": i + 1}
@@ -65,8 +25,8 @@ def criar_questoes(n=5):
 
 
 class TestCriarSimulado:
-    def test_criar_simulado_com_questoes(self):
-        criar_questoes(5)
+    def test_criar_simulado_com_questoes(self, client):
+        criar_questoes(client, 5)
         response = client.post(
             "/simulados/",
             json={"nome": "Teste Simulado", "quantidade": 3},
@@ -76,8 +36,8 @@ class TestCriarSimulado:
         assert data["simulado"]["nome"] == "Teste Simulado"
         assert len(data["questao_ids"]) == 3
 
-    def test_criar_simulado_questoes_insuficientes(self):
-        criar_questoes(2)
+    def test_criar_simulado_questoes_insuficientes(self, client):
+        criar_questoes(client, 2)
         response = client.post(
             "/simulados/",
             json={"nome": "Teste Sem Questoes", "quantidade": 10},
@@ -86,8 +46,8 @@ class TestCriarSimulado:
 
 
 class TestSubmeterRespostas:
-    def test_submeter_e_corrigir(self):
-        criar_questoes(3)
+    def test_submeter_e_corrigir(self, client):
+        criar_questoes(client, 3)
         criado = client.post(
             "/simulados/",
             json={"nome": "Simulado Correcao", "quantidade": 3},
@@ -97,9 +57,8 @@ class TestSubmeterRespostas:
         questao_ids = criado["questao_ids"]
 
         respostas = [
-            {"questao_id": questao_ids[0], "alternativa_escolhida": "A"},
-            {"questao_id": questao_ids[1], "alternativa_escolhida": "B"},
-            {"questao_id": questao_ids[2], "alternativa_escolhida": "A"},
+            {"questao_id": qid, "alternativa_escolhida": "A"}
+            for qid in questao_ids
         ]
 
         response = client.post(
@@ -111,8 +70,8 @@ class TestSubmeterRespostas:
         assert data["finalizado"] is True
         assert data["nota"] is not None
 
-    def test_submeter_simulado_ja_finalizado(self):
-        criar_questoes(2)
+    def test_submeter_simulado_ja_finalizado(self, client):
+        criar_questoes(client, 2)
         criado = client.post(
             "/simulados/",
             json={"nome": "Ja Finalizado", "quantidade": 2},
@@ -138,14 +97,14 @@ class TestSubmeterRespostas:
 
 
 class TestDashboard:
-    def test_dashboard_vazio(self):
+    def test_dashboard_vazio(self, client):
         response = client.get("/simulados/dashboard")
         assert response.status_code == 200
         data = response.json()
         assert data["total_simulados"] == 0
 
-    def test_dashboard_com_dados(self):
-        criar_questoes(3)
+    def test_dashboard_com_dados(self, client):
+        criar_questoes(client, 3)
         criado = client.post(
             "/simulados/",
             json={"nome": "Dashboard Test", "quantidade": 3},
@@ -167,8 +126,8 @@ class TestDashboard:
 
 
 class TestRemoverSimulado:
-    def test_remover_existente(self):
-        criar_questoes(2)
+    def test_remover_existente(self, client):
+        criar_questoes(client, 2)
         criado = client.post(
             "/simulados/",
             json={"nome": "Para Remover", "quantidade": 2},

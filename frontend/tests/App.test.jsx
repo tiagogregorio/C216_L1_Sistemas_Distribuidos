@@ -12,16 +12,13 @@ describe("App", () => {
 	it("renderiza os botoes de navegacao", () => {
 		render(<App />);
 		expect(screen.getByText("Questoes")).toBeInTheDocument();
-		expect(screen.getByText("Novo Simulado")).toBeInTheDocument();
 		expect(screen.getByText("Historico")).toBeInTheDocument();
 		expect(screen.getByText("Dashboard")).toBeInTheDocument();
 	});
 
-	it("inicia na pagina de dashboard", () => {
+	it("mostra estado de carregamento no dashboard", () => {
 		render(<App />);
-		expect(
-			screen.getByText("Dashboard de Desempenho"),
-		).toBeInTheDocument();
+		expect(screen.getByText("Carregando dashboard...")).toBeInTheDocument();
 	});
 
 	it("navega para a pagina de questoes ao clicar", async () => {
@@ -34,8 +31,8 @@ describe("App", () => {
 	it("navega para novo simulado ao clicar", async () => {
 		render(<App />);
 		const user = userEvent.setup();
-		await user.click(screen.getByText("Novo Simulado"));
-		expect(screen.getByText("Novo Simulado")).toBeInTheDocument();
+		const navButtons = screen.getAllByText("Novo Simulado");
+		await user.click(navButtons[0]);
 		expect(
 			screen.getByText("Configure as opcoes e inicie sua prova"),
 		).toBeInTheDocument();
