@@ -1,11 +1,11 @@
 """Script de seed para popular o banco com questoes do ENADE."""
 
+from sqlalchemy import create_engine
+from sqlalchemy.orm import sessionmaker
+
 from app.core.config import DATABASE_URL
 from app.database.base import Base
 from app.models.questao import Questao
-
-from sqlalchemy import create_engine
-from sqlalchemy.orm import sessionmaker
 
 QUESTOES_SEED = [
     # === ENADE 2019 - Componente Especifico ===
