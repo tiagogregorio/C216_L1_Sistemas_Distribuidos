@@ -8,9 +8,9 @@ from app.core.config import CORS_ORIGINS
 
 app = FastAPI(
     title="ENADE Study Platform",
-    description="API da plataforma de estudos para o ENADE de Engenharia de Computacao.",
-    version="0.1.0",
-)
+    description=(
+        "API da plataforma de estudos para o ENADE."
+    ),
 
 app.add_middleware(
     CORSMiddleware,
