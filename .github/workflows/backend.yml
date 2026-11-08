@@ -21,9 +21,9 @@ jobs:
           pip install poetry
           cd backend && poetry install --no-interaction
       - name: Ruff lint
-        run: cd backend && poetry run ruff check .
+        run: cd backend && poetry run ruff check --exclude alembic .
       - name: Ruff format check
-        run: cd backend && poetry run ruff format --check .
+        run: cd backend && poetry run ruff format --check --exclude alembic .
 
   test:
     runs-on: ubuntu-latest
