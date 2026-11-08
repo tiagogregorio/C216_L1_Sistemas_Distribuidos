@@ -67,9 +67,7 @@ class SimuladoRepository:
 
     def media_nota(self) -> float | None:
         """Retorna a media das notas dos simulados finalizados."""
-        consulta = select(func.avg(Simulado.nota)).where(
-            Simulado.finalizado.is_(True)
-        )
+        consulta = select(func.avg(Simulado.nota)).where(Simulado.finalizado.is_(True))
         resultado = self.db.scalar(consulta)
         return round(resultado, 2) if resultado is not None else None
 
@@ -77,9 +75,7 @@ class SimuladoRepository:
         """Retorna total de acertos e total de respostas."""
         consulta_total = select(func.count()).select_from(Resposta)
         consulta_acertos = (
-            select(func.count())
-            .select_from(Resposta)
-            .where(Resposta.correta.is_(True))
+            select(func.count()).select_from(Resposta).where(Resposta.correta.is_(True))
         )
         total = self.db.scalar(consulta_total) or 0
         acertos = self.db.scalar(consulta_acertos) or 0

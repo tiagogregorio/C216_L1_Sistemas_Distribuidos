@@ -62,9 +62,7 @@ class QuestaoService:
     def buscar(self, questao_id: int) -> Questao:
         questao = self.repositorio.buscar_por_id(questao_id)
         if questao is None:
-            raise QuestaoNaoEncontradaError(
-                f"Questao {questao_id} nao encontrada."
-            )
+            raise QuestaoNaoEncontradaError(f"Questao {questao_id} nao encontrada.")
         return questao
 
     def listar(

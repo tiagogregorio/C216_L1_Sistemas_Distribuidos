@@ -14,9 +14,7 @@ class Resposta(Base):
     id: Mapped[int] = mapped_column(primary_key=True)
     simulado_id: Mapped[int] = mapped_column(ForeignKey("simulados.id"))
     questao_id: Mapped[int] = mapped_column(ForeignKey("questoes.id"))
-    alternativa_escolhida: Mapped[str | None] = mapped_column(
-        String(1), nullable=True
-    )
+    alternativa_escolhida: Mapped[str | None] = mapped_column(String(1), nullable=True)
     correta: Mapped[bool | None] = mapped_column(nullable=True)
     tempo_resposta: Mapped[float | None] = mapped_column(nullable=True)
 

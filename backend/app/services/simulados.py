@@ -56,9 +56,7 @@ class SimuladoService:
     def buscar(self, simulado_id: int) -> Simulado:
         simulado = self.simulado_repo.buscar_por_id(simulado_id)
         if simulado is None:
-            raise SimuladoNaoEncontradoError(
-                f"Simulado {simulado_id} nao encontrado."
-            )
+            raise SimuladoNaoEncontradoError(f"Simulado {simulado_id} nao encontrado.")
         return simulado
 
     def listar(self) -> list[Simulado]:

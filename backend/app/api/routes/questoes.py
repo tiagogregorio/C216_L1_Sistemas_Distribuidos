@@ -77,9 +77,7 @@ def substituir_questao(
     """Substitui completamente uma questao existente."""
     try:
         service.buscar(questao_id)
-        return service.atualizar(
-            questao_id, QuestaoUpdate(**dados.model_dump())
-        )
+        return service.atualizar(questao_id, QuestaoUpdate(**dados.model_dump()))
     except QuestaoNaoEncontradaError as e:
         raise HTTPException(status_code=404, detail=str(e))
     except ValueError as e:

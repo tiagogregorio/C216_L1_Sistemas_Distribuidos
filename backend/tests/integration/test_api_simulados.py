@@ -57,8 +57,7 @@ class TestSubmeterRespostas:
         questao_ids = criado["questao_ids"]
 
         respostas = [
-            {"questao_id": qid, "alternativa_escolhida": "A"}
-            for qid in questao_ids
+            {"questao_id": qid, "alternativa_escolhida": "A"} for qid in questao_ids
         ]
 
         response = client.post(
@@ -81,8 +80,7 @@ class TestSubmeterRespostas:
         questao_ids = criado["questao_ids"]
 
         respostas = [
-            {"questao_id": qid, "alternativa_escolhida": "A"}
-            for qid in questao_ids
+            {"questao_id": qid, "alternativa_escolhida": "A"} for qid in questao_ids
         ]
         client.post(
             f"/simulados/{simulado_id}/submeter",
@@ -132,7 +130,5 @@ class TestRemoverSimulado:
             "/simulados/",
             json={"nome": "Para Remover", "quantidade": 2},
         ).json()
-        response = client.delete(
-            f"/simulados/{criado['simulado']['id']}"
-        )
+        response = client.delete(f"/simulados/{criado['simulado']['id']}")
         assert response.status_code == 204
