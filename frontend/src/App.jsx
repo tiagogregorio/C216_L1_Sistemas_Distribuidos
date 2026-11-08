@@ -1,10 +1,10 @@
 import { useState } from "react";
 import Navbar from "./components/Navbar";
-import QuestoesPage from "./pages/QuestoesPage";
-import NovoSimuladoPage from "./pages/NovoSimuladoPage";
-import SimuladoPage from "./pages/SimuladoPage";
-import HistoricoPage from "./pages/HistoricoPage";
 import DashboardPage from "./pages/DashboardPage";
+import HistoricoPage from "./pages/HistoricoPage";
+import NovoSimuladoPage from "./pages/NovoSimuladoPage";
+import QuestoesPage from "./pages/QuestoesPage";
+import SimuladoPage from "./pages/SimuladoPage";
 
 export default function App() {
 	const [pagina, setPagina] = useState("dashboard");
@@ -22,11 +22,15 @@ export default function App() {
 
 	return (
 		<div className="min-h-screen">
-			{pagina !== "simulado" && <Navbar pagina={pagina} setPagina={setPagina} />}
+			{pagina !== "simulado" && (
+				<Navbar pagina={pagina} setPagina={setPagina} />
+			)}
 			<main>
 				{pagina === "dashboard" && <DashboardPage />}
 				{pagina === "questoes" && <QuestoesPage />}
-				{pagina === "novo-simulado" && <NovoSimuladoPage onIniciar={iniciarSimulado} />}
+				{pagina === "novo-simulado" && (
+					<NovoSimuladoPage onIniciar={iniciarSimulado} />
+				)}
 				{pagina === "simulado" && simuladoAtivo && (
 					<SimuladoPage
 						simuladoId={simuladoAtivo.simuladoId}

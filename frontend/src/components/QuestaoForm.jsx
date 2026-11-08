@@ -35,7 +35,11 @@ export default function QuestaoForm({ onSubmit, inicial = null }) {
 		}
 		setEnviando(true);
 		try {
-			await onSubmit({ ...dados, ano: Number(dados.ano), numero: Number(dados.numero) });
+			await onSubmit({
+				...dados,
+				ano: Number(dados.ano),
+				numero: Number(dados.numero),
+			});
 			if (!inicial) setDados(CAMPOS_VAZIOS);
 			setErros({});
 		} catch (err) {
@@ -51,7 +55,10 @@ export default function QuestaoForm({ onSubmit, inicial = null }) {
 	return (
 		<form onSubmit={handleSubmit} className="space-y-4">
 			{erros.geral && (
-				<div role="alert" className="bg-red-900/30 border border-red-500 text-red-300 px-4 py-2 rounded-lg">
+				<div
+					role="alert"
+					className="bg-red-900/30 border border-red-500 text-red-300 px-4 py-2 rounded-lg"
+				>
 					{erros.geral}
 				</div>
 			)}
@@ -59,24 +66,48 @@ export default function QuestaoForm({ onSubmit, inicial = null }) {
 			<div className="grid grid-cols-2 md:grid-cols-4 gap-4">
 				<div>
 					<label className="block text-sm mb-1">Ano</label>
-					<input type="number" value={dados.ano} onChange={(e) => handleChange("ano", e.target.value)} className={inputClass} />
-					{erros.ano && <p className="text-red-400 text-xs mt-1">{erros.ano}</p>}
+					<input
+						type="number"
+						value={dados.ano}
+						onChange={(e) => handleChange("ano", e.target.value)}
+						className={inputClass}
+					/>
+					{erros.ano && (
+						<p className="text-red-400 text-xs mt-1">{erros.ano}</p>
+					)}
 				</div>
 				<div>
 					<label className="block text-sm mb-1">Numero</label>
-					<input type="number" value={dados.numero} onChange={(e) => handleChange("numero", e.target.value)} className={inputClass} />
-					{erros.numero && <p className="text-red-400 text-xs mt-1">{erros.numero}</p>}
+					<input
+						type="number"
+						value={dados.numero}
+						onChange={(e) => handleChange("numero", e.target.value)}
+						className={inputClass}
+					/>
+					{erros.numero && (
+						<p className="text-red-400 text-xs mt-1">{erros.numero}</p>
+					)}
 				</div>
 				<div>
 					<label className="block text-sm mb-1">Tipo</label>
-					<select value={dados.tipo} onChange={(e) => handleChange("tipo", e.target.value)} className={inputClass}>
+					<select
+						value={dados.tipo}
+						onChange={(e) => handleChange("tipo", e.target.value)}
+						className={inputClass}
+					>
 						<option value="CE">Componente Especifico</option>
 						<option value="FG">Formacao Geral</option>
 					</select>
 				</div>
 				<div>
 					<label className="block text-sm mb-1">Dificuldade</label>
-					<select value={dados.dificuldade || ""} onChange={(e) => handleChange("dificuldade", e.target.value || null)} className={inputClass}>
+					<select
+						value={dados.dificuldade || ""}
+						onChange={(e) =>
+							handleChange("dificuldade", e.target.value || null)
+						}
+						className={inputClass}
+					>
 						<option value="">Nao definida</option>
 						<option value="facil">Facil</option>
 						<option value="medio">Medio</option>
@@ -87,39 +118,75 @@ export default function QuestaoForm({ onSubmit, inicial = null }) {
 
 			<div>
 				<label className="block text-sm mb-1">Assunto</label>
-				<input type="text" value={dados.assunto || ""} onChange={(e) => handleChange("assunto", e.target.value)} className={inputClass} placeholder="Ex: Algoritmos de Ordenacao" />
+				<input
+					type="text"
+					value={dados.assunto || ""}
+					onChange={(e) => handleChange("assunto", e.target.value)}
+					className={inputClass}
+					placeholder="Ex: Algoritmos de Ordenacao"
+				/>
 			</div>
 
 			<div>
 				<label className="block text-sm mb-1">Enunciado</label>
-				<textarea rows={4} value={dados.enunciado} onChange={(e) => handleChange("enunciado", e.target.value)} className={inputClass} placeholder="Texto completo da questao..." />
-				{erros.enunciado && <p className="text-red-400 text-xs mt-1">{erros.enunciado}</p>}
+				<textarea
+					rows={4}
+					value={dados.enunciado}
+					onChange={(e) => handleChange("enunciado", e.target.value)}
+					className={inputClass}
+					placeholder="Texto completo da questao..."
+				/>
+				{erros.enunciado && (
+					<p className="text-red-400 text-xs mt-1">{erros.enunciado}</p>
+				)}
 			</div>
 
 			{["a", "b", "c", "d", "e"].map((letra) => (
 				<div key={letra}>
-					<label className="block text-sm mb-1">Alternativa {letra.toUpperCase()}</label>
+					<label className="block text-sm mb-1">
+						Alternativa {letra.toUpperCase()}
+					</label>
 					<input
 						type="text"
 						value={dados[`alternativa_${letra}`]}
-						onChange={(e) => handleChange(`alternativa_${letra}`, e.target.value)}
+						onChange={(e) =>
+							handleChange(`alternativa_${letra}`, e.target.value)
+						}
 						className={inputClass}
 					/>
-					{erros[`alternativa_${letra}`] && <p className="text-red-400 text-xs mt-1">{erros[`alternativa_${letra}`]}</p>}
+					{erros[`alternativa_${letra}`] && (
+						<p className="text-red-400 text-xs mt-1">
+							{erros[`alternativa_${letra}`]}
+						</p>
+					)}
 				</div>
 			))}
 
 			<div>
 				<label className="block text-sm mb-1">Resposta correta</label>
-				<select value={dados.resposta} onChange={(e) => handleChange("resposta", e.target.value)} className={inputClass}>
+				<select
+					value={dados.resposta}
+					onChange={(e) => handleChange("resposta", e.target.value)}
+					className={inputClass}
+				>
 					{["A", "B", "C", "D", "E"].map((l) => (
-						<option key={l} value={l}>{l}</option>
+						<option key={l} value={l}>
+							{l}
+						</option>
 					))}
 				</select>
 			</div>
 
-			<button type="submit" disabled={enviando} className="w-full bg-[var(--cor-destaque)] text-[var(--cor-fundo)] font-bold py-3 rounded-lg hover:brightness-110 transition disabled:opacity-50 cursor-pointer">
-				{enviando ? "Salvando..." : inicial ? "Atualizar Questao" : "Cadastrar Questao"}
+			<button
+				type="submit"
+				disabled={enviando}
+				className="w-full bg-[var(--cor-destaque)] text-[var(--cor-fundo)] font-bold py-3 rounded-lg hover:brightness-110 transition disabled:opacity-50 cursor-pointer"
+			>
+				{enviando
+					? "Salvando..."
+					: inicial
+						? "Atualizar Questao"
+						: "Cadastrar Questao"}
 			</button>
 		</form>
 	);

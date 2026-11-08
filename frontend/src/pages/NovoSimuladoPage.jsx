@@ -1,6 +1,6 @@
 import { useState } from "react";
-import { validarSimulado } from "../validation";
 import { criarSimulado } from "../services/api";
+import { validarSimulado } from "../validation";
 
 export default function NovoSimuladoPage({ onIniciar }) {
 	const [dados, setDados] = useState({
@@ -51,19 +51,29 @@ export default function NovoSimuladoPage({ onIniciar }) {
 	return (
 		<div className="max-w-2xl mx-auto p-6">
 			<div className="text-center mb-8">
-				<h1 className="text-3xl font-bold text-[var(--cor-destaque)] mb-2">Novo Simulado</h1>
+				<h1 className="text-3xl font-bold text-[var(--cor-destaque)] mb-2">
+					Novo Simulado
+				</h1>
 				<p className="text-gray-400">Configure as opcoes e inicie sua prova</p>
 			</div>
 
-			<form onSubmit={handleSubmit} className="bg-[var(--cor-painel)] border border-[var(--cor-borda)] rounded-2xl p-8 space-y-6">
+			<form
+				onSubmit={handleSubmit}
+				className="bg-[var(--cor-painel)] border border-[var(--cor-borda)] rounded-2xl p-8 space-y-6"
+			>
 				{erros.geral && (
-					<div role="alert" className="bg-red-900/30 border border-red-500 text-red-300 px-4 py-3 rounded-lg">
+					<div
+						role="alert"
+						className="bg-red-900/30 border border-red-500 text-red-300 px-4 py-3 rounded-lg"
+					>
 						{erros.geral}
 					</div>
 				)}
 
 				<div>
-					<label className="block text-sm mb-2 text-gray-300">Nome do simulado</label>
+					<label className="block text-sm mb-2 text-gray-300">
+						Nome do simulado
+					</label>
 					<input
 						type="text"
 						value={dados.nome}
@@ -71,11 +81,15 @@ export default function NovoSimuladoPage({ onIniciar }) {
 						className={inputClass}
 						placeholder="Ex: Revisao ENADE 2019"
 					/>
-					{erros.nome && <p className="text-red-400 text-sm mt-1">{erros.nome}</p>}
+					{erros.nome && (
+						<p className="text-red-400 text-sm mt-1">{erros.nome}</p>
+					)}
 				</div>
 
 				<div>
-					<label className="block text-sm mb-2 text-gray-300">Quantidade de questoes</label>
+					<label className="block text-sm mb-2 text-gray-300">
+						Quantidade de questoes
+					</label>
 					<input
 						type="number"
 						value={dados.quantidade}
@@ -84,13 +98,21 @@ export default function NovoSimuladoPage({ onIniciar }) {
 						min="1"
 						max="50"
 					/>
-					{erros.quantidade && <p className="text-red-400 text-sm mt-1">{erros.quantidade}</p>}
+					{erros.quantidade && (
+						<p className="text-red-400 text-sm mt-1">{erros.quantidade}</p>
+					)}
 				</div>
 
 				<div className="grid grid-cols-3 gap-4">
 					<div>
-						<label className="block text-sm mb-2 text-gray-300">Ano (opcional)</label>
-						<select value={dados.ano} onChange={(e) => handleChange("ano", e.target.value)} className={inputClass}>
+						<label className="block text-sm mb-2 text-gray-300">
+							Ano (opcional)
+						</label>
+						<select
+							value={dados.ano}
+							onChange={(e) => handleChange("ano", e.target.value)}
+							className={inputClass}
+						>
 							<option value="">Todos</option>
 							<option value="2014">2014</option>
 							<option value="2017">2017</option>
@@ -99,16 +121,28 @@ export default function NovoSimuladoPage({ onIniciar }) {
 						</select>
 					</div>
 					<div>
-						<label className="block text-sm mb-2 text-gray-300">Tipo (opcional)</label>
-						<select value={dados.tipo} onChange={(e) => handleChange("tipo", e.target.value)} className={inputClass}>
+						<label className="block text-sm mb-2 text-gray-300">
+							Tipo (opcional)
+						</label>
+						<select
+							value={dados.tipo}
+							onChange={(e) => handleChange("tipo", e.target.value)}
+							className={inputClass}
+						>
 							<option value="">Todos</option>
 							<option value="CE">Comp. Especifico</option>
 							<option value="FG">Form. Geral</option>
 						</select>
 					</div>
 					<div>
-						<label className="block text-sm mb-2 text-gray-300">Dificuldade</label>
-						<select value={dados.dificuldade} onChange={(e) => handleChange("dificuldade", e.target.value)} className={inputClass}>
+						<label className="block text-sm mb-2 text-gray-300">
+							Dificuldade
+						</label>
+						<select
+							value={dados.dificuldade}
+							onChange={(e) => handleChange("dificuldade", e.target.value)}
+							className={inputClass}
+						>
 							<option value="">Todas</option>
 							<option value="facil">Facil</option>
 							<option value="medio">Medio</option>

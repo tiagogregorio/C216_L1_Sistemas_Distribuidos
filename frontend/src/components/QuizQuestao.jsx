@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useEffect, useState } from "react";
 
 export default function QuizQuestao({ questao, numero, total, onResponder }) {
 	const [selecionada, setSelecionada] = useState(null);
@@ -67,11 +67,15 @@ export default function QuizQuestao({ questao, numero, total, onResponder }) {
 			<div className="flex items-center justify-between mb-4">
 				<div className="flex items-center gap-3">
 					{questao.dificuldade && (
-						<span className={`text-xs px-3 py-1 rounded-full font-bold uppercase tracking-wider ${
-							questao.dificuldade === "facil" ? "bg-green-500/20 text-green-300 border border-green-500/40" :
-							questao.dificuldade === "medio" ? "bg-yellow-500/20 text-yellow-300 border border-yellow-500/40" :
-							"bg-red-500/20 text-red-300 border border-red-500/40"
-						}`}>
+						<span
+							className={`text-xs px-3 py-1 rounded-full font-bold uppercase tracking-wider ${
+								questao.dificuldade === "facil"
+									? "bg-green-500/20 text-green-300 border border-green-500/40"
+									: questao.dificuldade === "medio"
+										? "bg-yellow-500/20 text-yellow-300 border border-yellow-500/40"
+										: "bg-red-500/20 text-red-300 border border-red-500/40"
+							}`}
+						>
 							{questao.dificuldade}
 						</span>
 					)}
@@ -80,7 +84,9 @@ export default function QuizQuestao({ questao, numero, total, onResponder }) {
 					)}
 				</div>
 				<div className="bg-black/40 border border-cyan-500/30 rounded-xl px-5 py-2 font-mono">
-					<span className="text-cyan-400 text-2xl font-bold">{formatarTempo(tempo)}</span>
+					<span className="text-cyan-400 text-2xl font-bold">
+						{formatarTempo(tempo)}
+					</span>
 				</div>
 			</div>
 
@@ -90,8 +96,11 @@ export default function QuizQuestao({ questao, numero, total, onResponder }) {
 					<div
 						key={i}
 						className={`h-2 flex-1 rounded-full transition-all duration-300 ${
-							i < numero ? "bg-gradient-to-r from-green-400 to-cyan-400" :
-							i === numero - 1 ? "bg-yellow-400" : "bg-gray-700"
+							i < numero
+								? "bg-gradient-to-r from-green-400 to-cyan-400"
+								: i === numero - 1
+									? "bg-yellow-400"
+									: "bg-gray-700"
 						}`}
 					/>
 				))}
@@ -148,11 +157,13 @@ export default function QuizQuestao({ questao, numero, total, onResponder }) {
 
 			{/* Feedback */}
 			{confirmada && (
-				<div className={`text-center py-5 rounded-xl font-black text-xl border-2 ${
-					selecionada === questao.resposta
-						? "bg-green-500/20 text-green-300 border-green-400/50"
-						: "bg-red-500/20 text-red-300 border-red-400/50"
-				}`}>
+				<div
+					className={`text-center py-5 rounded-xl font-black text-xl border-2 ${
+						selecionada === questao.resposta
+							? "bg-green-500/20 text-green-300 border-green-400/50"
+							: "bg-red-500/20 text-red-300 border-red-400/50"
+					}`}
+				>
 					{selecionada === questao.resposta
 						? "RESPOSTA CERTA!"
 						: `ERROU! A resposta era a alternativa ${questao.resposta}.`}
