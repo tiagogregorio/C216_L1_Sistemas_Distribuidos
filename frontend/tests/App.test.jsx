@@ -1,9 +1,15 @@
 import { render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
-import { describe, expect, it } from "vitest";
+import { beforeEach, describe, expect, it } from "vitest";
 import App from "../src/App";
 
 describe("App", () => {
+	beforeEach(() => {
+		// App persiste a pagina atual e o simulado ativo no localStorage;
+		// limpa entre os testes para cada um comecar do dashboard.
+		localStorage.clear();
+	});
+
 	it("renderiza o titulo da plataforma", () => {
 		render(<App />);
 		expect(screen.getByText("ENADE Study Platform")).toBeInTheDocument();

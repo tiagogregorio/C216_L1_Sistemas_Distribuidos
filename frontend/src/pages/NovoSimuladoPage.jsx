@@ -1,5 +1,9 @@
-import { useState } from "react";
-import { criarSimulado } from "../services/api";
+import { useEffect, useState } from "react";
+import {
+	coberturaQuestoes,
+	criarSimulado,
+	reiniciarCobertura,
+} from "../services/api";
 import { validarSimulado } from "../validation";
 
 export default function NovoSimuladoPage({ onIniciar }) {
@@ -9,9 +13,40 @@ export default function NovoSimuladoPage({ onIniciar }) {
 		ano: "",
 		tipo: "",
 		dificuldade: "",
+		modo: "aleatorio",
 	});
 	const [erros, setErros] = useState({});
 	const [enviando, setEnviando] = useState(false);
+	const [cobertura, setCobertura] = useState(null);
+	const [reiniciando, setReiniciando] = useState(false);
+
+	useEffect(() => {
+		if (dados.modo !== "sem_repetir") return;
+		coberturaQuestoes()
+			.then(setCobertura)
+			.catch(() => setCobertura(null));
+	}, [dados.modo]);
+
+	async function handleReiniciarCobertura() {
+		if (
+			!confirm(
+				"Comecar um novo ciclo? Voce podera responder todas as questoes " +
+					"de novo no modo sem repetir. Seu historico e dashboard nao " +
+					"serao apagados.",
+			)
+		) {
+			return;
+		}
+		setReiniciando(true);
+		try {
+			const nova = await reiniciarCobertura();
+			setCobertura(nova);
+		} catch (err) {
+			setErros({ geral: err.message });
+		} finally {
+			setReiniciando(false);
+		}
+	}
 
 	function handleChange(campo, valor) {
 		setDados((prev) => ({ ...prev, [campo]: valor }));
@@ -35,6 +70,7 @@ export default function NovoSimuladoPage({ onIniciar }) {
 			if (dados.ano) payload.ano = Number(dados.ano);
 			if (dados.tipo) payload.tipo = dados.tipo;
 			if (dados.dificuldade) payload.dificuldade = dados.dificuldade;
+			payload.modo = dados.modo;
 
 			const resultado = await criarSimulado(payload);
 			onIniciar(resultado.simulado.id, resultado.questao_ids);
@@ -100,6 +136,79 @@ export default function NovoSimuladoPage({ onIniciar }) {
 					/>
 					{erros.quantidade && (
 						<p className="text-red-400 text-sm mt-1">{erros.quantidade}</p>
+					)}
+				</div>
+
+				<div>
+					<label className="block text-sm mb-2 text-gray-300">
+						Modo do simulado
+					</label>
+					<div className="grid grid-cols-2 gap-3">
+						<button
+							type="button"
+							onClick={() => handleChange("modo", "aleatorio")}
+							className={`text-left px-4 py-3 rounded-lg border-2 transition-colors cursor-pointer ${
+								dados.modo === "aleatorio"
+									? "border-[var(--cor-destaque)] bg-[var(--cor-destaque)]/10"
+									: "border-[var(--cor-borda)] hover:border-gray-500"
+							}`}
+						>
+							<div className="font-bold text-sm">Aleatorio</div>
+							<div className="text-xs text-gray-400 mt-0.5">
+								Qualquer questao pode cair, mesmo repetida
+							</div>
+						</button>
+						<button
+							type="button"
+							onClick={() => handleChange("modo", "sem_repetir")}
+							className={`text-left px-4 py-3 rounded-lg border-2 transition-colors cursor-pointer ${
+								dados.modo === "sem_repetir"
+									? "border-[var(--cor-destaque)] bg-[var(--cor-destaque)]/10"
+									: "border-[var(--cor-borda)] hover:border-gray-500"
+							}`}
+						>
+							<div className="font-bold text-sm">Sem repetir</div>
+							<div className="text-xs text-gray-400 mt-0.5">
+								Cobre o banco inteiro sem repetir questao
+							</div>
+						</button>
+					</div>
+
+					{dados.modo === "sem_repetir" && cobertura && (
+						<div className="mt-3">
+							<div className="flex items-center justify-between text-xs text-gray-400 mb-1">
+								<span>
+									{cobertura.respondidas} de {cobertura.total} questoes ja
+									cobertas
+								</span>
+								<span className="font-bold text-[var(--cor-destaque)]">
+									{cobertura.percentual}%
+								</span>
+							</div>
+							<div className="bg-[var(--cor-fundo)] rounded-full h-2 overflow-hidden">
+								<div
+									className="h-full bg-[var(--cor-destaque)] transition-all"
+									style={{ width: `${cobertura.percentual}%` }}
+								/>
+							</div>
+							{cobertura.percentual >= 100 && (
+								<div className="mt-2">
+									<p className="text-xs text-[var(--cor-acerto)] font-bold">
+										Parabens! Voce ja cobriu 100% das questoes do banco.
+									</p>
+									<button
+										type="button"
+										onClick={handleReiniciarCobertura}
+										disabled={reiniciando}
+										className="mt-2 text-xs font-bold text-[var(--cor-destaque)] underline cursor-pointer disabled:opacity-50"
+									>
+										{reiniciando
+											? "Reiniciando..."
+											: "Reiniciar cobertura e treinar de novo"}
+									</button>
+								</div>
+							)}
+						</div>
 					)}
 				</div>
 

@@ -17,3 +17,9 @@ CORS_ORIGINS = [
 
 if FRONTEND_URL not in CORS_ORIGINS:
     CORS_ORIGINS.append(FRONTEND_URL)
+
+# Assistente de IA (Google Gemini). A chave fica apenas no backend; o
+# frontend nunca tem acesso a ela. Sem GEMINI_API_KEY configurada, o
+# endpoint do assistente responde 503 em vez de falhar silenciosamente.
+GEMINI_API_KEY = os.getenv("GEMINI_API_KEY", "")
+GEMINI_MODEL = os.getenv("GEMINI_MODEL", "gemini-2.5-flash")

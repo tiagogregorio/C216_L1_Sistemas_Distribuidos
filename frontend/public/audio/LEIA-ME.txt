@@ -1,0 +1,11 @@
+Coloque aqui o arquivo de musica de fundo com o nome exato:
+
+    musica-fundo.mp3
+
+A aplicacao toca esse arquivo (em loop, com barra de volume no canto
+inferior direito) durante o simulado. Se o arquivo nao existir, a
+aplicacao continua funcionando normalmente, apenas sem musica de fundo.
+
+Use um arquivo que voce tenha o direito de usar (musica propria,
+royalty-free, licenciada, ou de dominio publico). Nao inclua musica
+protegida por direitos autorais de terceiros sem autorizacao.

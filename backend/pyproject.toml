@@ -12,6 +12,7 @@ dependencies = [
     "sqlalchemy (>=2.1.4,<3.0.0)",
     "psycopg[binary] (>=3.3.6,<4.0.0)",
     "alembic (>=1.20.0,<2.0.0)",
+    "httpx (>=0.28.0,<1.0.0)",
 ]
 
 [tool.poetry]
@@ -25,7 +26,6 @@ build-backend = "poetry.core.masonry.api"
 dev = [
     "pytest (>=9.1.1,<10.0.0)",
     "ruff (>=0.16.3,<0.17.0)",
-    "httpx (>=0.28.0,<1.0.0)",
 ]
 
 [tool.pytest.ini_options]

@@ -16,3 +16,42 @@ body {
 	color: var(--cor-texto);
 	font-family: "Segoe UI", system-ui, sans-serif;
 }
+
+/* Luz girando em volta do numero da alternativa selecionada, discreta,
+   enquanto a resposta ainda nao foi confirmada. */
+@keyframes girar {
+	to {
+		transform: rotate(360deg);
+	}
+}
+
+.luz-girando {
+	position: relative;
+	border-radius: 9999px;
+	isolation: isolate;
+}
+
+.luz-girando::before {
+	content: "";
+	position: absolute;
+	inset: -3px;
+	border-radius: 9999px;
+	background: conic-gradient(
+		from 0deg,
+		transparent 0deg,
+		var(--cor-destaque) 25deg,
+		#fff7e0 35deg,
+		var(--cor-destaque) 45deg,
+		transparent 75deg,
+		transparent 360deg
+	);
+	filter: blur(1.5px);
+	animation: girar 1.6s linear infinite;
+	z-index: -1;
+}
+
+@media (prefers-reduced-motion: reduce) {
+	.luz-girando::before {
+		animation: none;
+	}
+}

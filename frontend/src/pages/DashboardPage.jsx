@@ -103,6 +103,68 @@ export default function DashboardPage() {
 				</div>
 			)}
 
+			{dados?.desempenho_por_assunto?.length > 0 && (
+				<div className="bg-[var(--cor-painel)] border border-[var(--cor-borda)] rounded-xl p-6 mb-6">
+					<h2 className="text-lg font-bold mb-4">Desempenho por Assunto</h2>
+					<div className="space-y-3">
+						{[...dados.desempenho_por_assunto]
+							.sort((a, b) => b.taxa - a.taxa)
+							.map((item) => (
+								<div key={item.assunto} className="flex items-center gap-4">
+									<span className="w-40 shrink-0 text-sm truncate">
+										{item.assunto}
+									</span>
+									<div className="flex-1 bg-[var(--cor-fundo)] rounded-full h-6 overflow-hidden">
+										<div
+											className="h-full rounded-full transition-all"
+											style={{
+												width: `${item.taxa}%`,
+												backgroundColor:
+													item.taxa >= 60
+														? "var(--cor-acerto)"
+														: item.taxa >= 40
+															? "var(--cor-destaque)"
+															: "var(--cor-erro)",
+											}}
+										/>
+									</div>
+									<span className="text-sm font-mono w-20 text-right">
+										{item.taxa}%
+									</span>
+									{item.tempo_medio != null && (
+										<span className="text-xs text-gray-500 w-20 text-right">
+											{item.tempo_medio.toFixed(0)}s/questao
+										</span>
+									)}
+								</div>
+							))}
+					</div>
+
+					{(() => {
+						const fracos = [...dados.desempenho_por_assunto]
+							.filter((item) => item.taxa < 60)
+							.sort((a, b) => a.taxa - b.taxa)
+							.slice(0, 3);
+						if (fracos.length === 0) return null;
+						return (
+							<div className="mt-5 bg-amber-900/20 border border-amber-500/30 rounded-lg p-4">
+								<p className="text-amber-300 text-sm font-bold mb-1">
+									O que estudar primeiro
+								</p>
+								<p className="text-amber-100/80 text-sm">
+									{fracos
+										.map((item) => `${item.assunto} (${item.taxa}%)`)
+										.join(", ")}{" "}
+									{fracos.length === 1
+										? "e onde voce mais precisa melhorar."
+										: "sao onde voce mais precisa melhorar."}
+								</p>
+							</div>
+						);
+					})()}
+				</div>
+			)}
+
 			{dados?.desempenho_por_tipo?.length > 0 && (
 				<div className="bg-[var(--cor-painel)] border border-[var(--cor-borda)] rounded-xl p-6">
 					<h2 className="text-lg font-bold mb-4">Desempenho por Tipo</h2>

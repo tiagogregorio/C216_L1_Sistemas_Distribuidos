@@ -90,6 +90,8 @@ cp .env.example .env
 | FRONTEND_URL       | URL do frontend (CORS)        | http://localhost:5173      |
 | CORS_ORIGINS       | Origens permitidas (CORS)     | http://localhost:5173,...  |
 | VITE_API_URL       | URL da API para o frontend    | http://localhost:8000      |
+| GEMINI_API_KEY     | Chave da API do Google Gemini (opcional, para o "Assistente IA") | vazio |
+| GEMINI_MODEL       | Modelo do Gemini usado pelo assistente | gemini-2.5-flash |
 
 ## Como Executar
 
@@ -186,6 +188,9 @@ cd frontend && npx playwright test
 | POST   | /questoes/          | Cadastra nova questao         |
 | GET    | /questoes/resumo    | Estatisticas do banco         |
 | GET    | /questoes/anos      | Anos disponiveis              |
+| GET    | /questoes/cobertura | Quantas questoes ja foram respondidas (modo sem repetir) |
+| POST   | /questoes/cobertura/reiniciar | Inicia um novo ciclo de cobertura |
+| POST   | /questoes/{id}/assistente-ia | Explicacao da questao via Gemini |
 | GET    | /questoes/{id}      | Busca questao por ID          |
 | PUT    | /questoes/{id}      | Substitui questao             |
 | PATCH  | /questoes/{id}      | Atualiza parcialmente         |
@@ -197,6 +202,7 @@ cd frontend && npx playwright test
 | GET    | /simulados/                    | Lista simulados                |
 | POST   | /simulados/                    | Gera novo simulado             |
 | GET    | /simulados/dashboard           | Estatisticas de desempenho     |
+| GET    | /simulados/relatorio           | Relatorio de revisao (questoes erradas, prioridades) |
 | GET    | /simulados/{id}                | Detalhes do simulado           |
 | GET    | /simulados/{id}/questoes       | Questoes do simulado           |
 | POST   | /simulados/{id}/submeter       | Submete respostas e corrige    |

@@ -14,9 +14,23 @@ class SimuladoRepository:
     def __init__(self, db: Session):
         self.db = db
 
-    def criar(self, nome: str, total_questoes: int) -> Simulado:
-        simulado = Simulado(nome=nome, total_questoes=total_questoes)
+    def criar(
+        self,
+        nome: str,
+        total_questoes: int,
+        questao_ids: list[int],
+        ciclo: int = 1,
+    ) -> Simulado:
+        """Cria o simulado e ja associa as questoes sorteadas (respostas em
+        branco), para que o simulado possa ser retomado mesmo antes de
+        qualquer resposta ser enviada."""
+        simulado = Simulado(nome=nome, total_questoes=total_questoes, ciclo=ciclo)
         self.db.add(simulado)
+        self.db.flush()
+
+        for questao_id in questao_ids:
+            self.db.add(Resposta(simulado_id=simulado.id, questao_id=questao_id))
+
         self.db.commit()
         self.db.refresh(simulado)
         return simulado
@@ -31,18 +45,35 @@ class SimuladoRepository:
     def adicionar_respostas(
         self, simulado: Simulado, respostas: list[dict]
     ) -> list[Resposta]:
-        """Adiciona as respostas e calcula nota do simulado."""
+        """Preenche as respostas e calcula nota do simulado.
+
+        As linhas de Resposta ja existem (criadas em branco junto com o
+        simulado), entao aqui apenas atualizamos a resposta escolhida; se
+        por algum motivo a linha nao existir, criamos uma nova.
+        """
         objetos = []
         for r in respostas:
-            resp = Resposta(
-                simulado_id=simulado.id,
-                questao_id=r["questao_id"],
-                alternativa_escolhida=r["alternativa_escolhida"],
-                correta=r["correta"],
-                tempo_resposta=r.get("tempo_resposta"),
+            existente = self.db.scalar(
+                select(Resposta).where(
+                    Resposta.simulado_id == simulado.id,
+                    Resposta.questao_id == r["questao_id"],
+                )
             )
-            self.db.add(resp)
-            objetos.append(resp)
+            if existente is not None:
+                existente.alternativa_escolhida = r["alternativa_escolhida"]
+                existente.correta = r["correta"]
+                existente.tempo_resposta = r.get("tempo_resposta")
+                objetos.append(existente)
+            else:
+                resp = Resposta(
+                    simulado_id=simulado.id,
+                    questao_id=r["questao_id"],
+                    alternativa_escolhida=r["alternativa_escolhida"],
+                    correta=r["correta"],
+                    tempo_resposta=r.get("tempo_resposta"),
+                )
+                self.db.add(resp)
+                objetos.append(resp)
 
         acertos = sum(1 for r in respostas if r["correta"])
         simulado.finalizado = True
@@ -108,6 +139,64 @@ class SimuladoRepository:
                 else 0,
             }
             for r in resultados
+        ]
+
+    def desempenho_por_assunto(self) -> list[dict]:
+        """Agrupa acertos, total e tempo medio de resposta por assunto."""
+        soma_acertos = func.sum(case((Resposta.correta.is_(True), 1), else_=0))
+
+        consulta = (
+            select(
+                Questao.assunto,
+                func.count(Resposta.id).label("total"),
+                soma_acertos.label("acertos"),
+                func.avg(Resposta.tempo_resposta).label("tempo_medio"),
+            )
+            .join(Questao, Resposta.questao_id == Questao.id)
+            .where(Resposta.correta.is_not(None))
+            .where(Questao.assunto.is_not(None))
+            .group_by(Questao.assunto)
+            .order_by(Questao.assunto)
+        )
+
+        resultados = self.db.execute(consulta).all()
+        return [
+            {
+                "assunto": r.assunto,
+                "total": r.total,
+                "acertos": int(r.acertos or 0),
+                "taxa": round((int(r.acertos or 0) / r.total) * 100, 2)
+                if r.total > 0
+                else 0,
+                "tempo_medio": round(r.tempo_medio, 1)
+                if r.tempo_medio is not None
+                else None,
+            }
+            for r in resultados
+        ]
+
+    def questoes_erradas(self, limite: int = 50) -> list[dict]:
+        """Lista as respostas erradas mais recentes, com os dados da
+        questao, para o relatorio de revisao."""
+        consulta = (
+            select(Resposta, Questao)
+            .join(Questao, Resposta.questao_id == Questao.id)
+            .where(Resposta.correta.is_(False))
+            .order_by(Resposta.id.desc())
+            .limit(limite)
+        )
+        resultados = self.db.execute(consulta).all()
+        return [
+            {
+                "questao_id": questao.id,
+                "ano": questao.ano,
+                "numero": questao.numero,
+                "assunto": questao.assunto,
+                "enunciado": questao.enunciado,
+                "alternativa_escolhida": resposta.alternativa_escolhida,
+                "resposta_correta": questao.resposta,
+            }
+            for resposta, questao in resultados
         ]
 
     def desempenho_por_tipo(self) -> list[dict]:

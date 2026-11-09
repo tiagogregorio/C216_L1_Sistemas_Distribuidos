@@ -14,16 +14,57 @@ const CAMPOS_VAZIOS = {
 	resposta: "A",
 	assunto: "",
 	dificuldade: "medio",
+	imagem: null,
 };
+
+/**
+ * Le um arquivo de imagem, redimensiona (largura maxima) e comprime em
+ * JPEG, devolvendo uma data URI base64 pronta para salvar no banco. Isso
+ * evita gravar fotos/prints gigantes direto no Postgres.
+ */
+function redimensionarImagem(arquivo, larguraMaxima = 900, qualidade = 0.82) {
+	return new Promise((resolve, reject) => {
+		const leitor = new FileReader();
+		leitor.onerror = () => reject(new Error("Nao foi possivel ler o arquivo."));
+		leitor.onload = () => {
+			const imagem = new Image();
+			imagem.onerror = () => reject(new Error("Arquivo de imagem invalido."));
+			imagem.onload = () => {
+				const escala = Math.min(1, larguraMaxima / imagem.width);
+				const canvas = document.createElement("canvas");
+				canvas.width = Math.round(imagem.width * escala);
+				canvas.height = Math.round(imagem.height * escala);
+				const ctx = canvas.getContext("2d");
+				ctx.drawImage(imagem, 0, 0, canvas.width, canvas.height);
+				resolve(canvas.toDataURL("image/jpeg", qualidade));
+			};
+			imagem.src = leitor.result;
+		};
+		leitor.readAsDataURL(arquivo);
+	});
+}
 
 export default function QuestaoForm({ onSubmit, inicial = null }) {
 	const [dados, setDados] = useState(inicial || CAMPOS_VAZIOS);
 	const [erros, setErros] = useState({});
 	const [enviando, setEnviando] = useState(false);
+	const [erroImagem, setErroImagem] = useState(null);
 
 	function handleChange(campo, valor) {
 		setDados((prev) => ({ ...prev, [campo]: valor }));
 		setErros((prev) => ({ ...prev, [campo]: undefined }));
+	}
+
+	async function handleImagemSelecionada(e) {
+		const arquivo = e.target.files?.[0];
+		if (!arquivo) return;
+		setErroImagem(null);
+		try {
+			const dataUri = await redimensionarImagem(arquivo);
+			handleChange("imagem", dataUri);
+		} catch (err) {
+			setErroImagem(err.message);
+		}
 	}
 
 	async function handleSubmit(e) {
@@ -125,6 +166,38 @@ export default function QuestaoForm({ onSubmit, inicial = null }) {
 					className={inputClass}
 					placeholder="Ex: Algoritmos de Ordenacao"
 				/>
+			</div>
+
+			<div>
+				<label className="block text-sm mb-1">
+					Imagem (codigo, diagrama ou tabela da questao) — opcional
+				</label>
+				{dados.imagem ? (
+					<div className="space-y-2">
+						<img
+							src={dados.imagem}
+							alt="Pre-visualizacao da imagem anexada a questao"
+							className="max-h-56 rounded-lg border border-[var(--cor-borda)]"
+						/>
+						<button
+							type="button"
+							onClick={() => handleChange("imagem", null)}
+							className="text-red-400 text-xs cursor-pointer hover:text-red-300"
+						>
+							Remover imagem
+						</button>
+					</div>
+				) : (
+					<input
+						type="file"
+						accept="image/*"
+						onChange={handleImagemSelecionada}
+						className="text-sm text-gray-300"
+					/>
+				)}
+				{erroImagem && (
+					<p className="text-red-400 text-xs mt-1">{erroImagem}</p>
+				)}
 			</div>
 
 			<div>

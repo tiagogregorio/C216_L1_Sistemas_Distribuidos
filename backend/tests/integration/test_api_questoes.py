@@ -90,3 +90,159 @@ class TestResumoQuestoes:
         data = response.json()
         assert data["total"] == 1
         assert data["componente_especifico"] == 1
+
+
+class TestImagemQuestao:
+    def test_criar_e_atualizar_imagem(self, client):
+        dados_com_imagem = {**QUESTAO_VALIDA, "imagem": "data:image/png;base64,abc123"}
+        criada = client.post("/questoes/", json=dados_com_imagem).json()
+        assert criada["imagem"] == "data:image/png;base64,abc123"
+
+        response = client.patch(
+            f"/questoes/{criada['id']}",
+            json={"imagem": "data:image/png;base64,outraImagem"},
+        )
+        assert response.status_code == 200
+        assert response.json()["imagem"] == "data:image/png;base64,outraImagem"
+
+    def test_questao_sem_imagem_retorna_null(self, client):
+        criada = client.post("/questoes/", json=QUESTAO_VALIDA).json()
+        assert criada["imagem"] is None
+
+
+class TestAssistenteIA:
+    def test_sem_chave_configurada_retorna_503(self, client):
+        """No ambiente de testes nao ha GEMINI_API_KEY configurada, entao o
+        endpoint deve falhar de forma previsivel (503), nunca travar."""
+        criada = client.post("/questoes/", json=QUESTAO_VALIDA).json()
+        response = client.post(f"/questoes/{criada['id']}/assistente-ia")
+        assert response.status_code == 503
+
+    def test_questao_inexistente_retorna_404(self, client):
+        response = client.post("/questoes/999/assistente-ia")
+        assert response.status_code == 404
+
+
+class TestCobertura:
+    def test_cobertura_vazia(self, client):
+        client.post("/questoes/", json=QUESTAO_VALIDA)
+        response = client.get("/questoes/cobertura")
+        assert response.status_code == 200
+        data = response.json()
+        assert data["total"] == 1
+        assert data["respondidas"] == 0
+        assert data["percentual"] == 0.0
+
+    def test_cobertura_apos_responder(self, client):
+        criada = client.post("/questoes/", json=QUESTAO_VALIDA).json()
+        simulado = client.post(
+            "/simulados/", json={"nome": "Cobertura", "quantidade": 1}
+        ).json()
+        client.post(
+            f"/simulados/{simulado['simulado']['id']}/submeter",
+            json={
+                "respostas": [
+                    {"questao_id": criada["id"], "alternativa_escolhida": "A"}
+                ]
+            },
+        )
+        response = client.get("/questoes/cobertura")
+        data = response.json()
+        assert data["respondidas"] == 1
+        assert data["percentual"] == 100.0
+
+
+class TestReiniciarCobertura:
+    def test_reiniciar_zera_a_cobertura_sem_apagar_historico(self, client):
+        criada = client.post("/questoes/", json=QUESTAO_VALIDA).json()
+        simulado = client.post(
+            "/simulados/", json={"nome": "Ciclo 1", "quantidade": 1}
+        ).json()
+        client.post(
+            f"/simulados/{simulado['simulado']['id']}/submeter",
+            json={
+                "respostas": [
+                    {"questao_id": criada["id"], "alternativa_escolhida": "C"}
+                ]
+            },
+        )
+        assert client.get("/questoes/cobertura").json()["percentual"] == 100.0
+
+        reiniciada = client.post("/questoes/cobertura/reiniciar").json()
+        assert reiniciada["percentual"] == 0.0
+        assert reiniciada["ciclo"] == 2
+
+        # O historico (listagem de simulados) continua existindo.
+        historico = client.get("/simulados/").json()
+        assert len(historico) == 1
+
+    def test_modo_sem_repetir_libera_questao_apos_reiniciar(self, client):
+        criada = client.post("/questoes/", json=QUESTAO_VALIDA).json()
+        primeiro = client.post(
+            "/simulados/",
+            json={"nome": "Antes", "quantidade": 1, "modo": "sem_repetir"},
+        ).json()
+        client.post(
+            f"/simulados/{primeiro['simulado']['id']}/submeter",
+            json={
+                "respostas": [
+                    {"questao_id": criada["id"], "alternativa_escolhida": "C"}
+                ]
+            },
+        )
+        # Sem reiniciar, a unica questao ja foi usada: deve falhar.
+        sem_sucesso = client.post(
+            "/simulados/",
+            json={"nome": "Depois", "quantidade": 1, "modo": "sem_repetir"},
+        )
+        assert sem_sucesso.status_code == 422
+
+        client.post("/questoes/cobertura/reiniciar")
+
+        # Apos reiniciar, a mesma questao pode ser sorteada de novo.
+        depois = client.post(
+            "/simulados/",
+            json={"nome": "Depois do reinicio", "quantidade": 1, "modo": "sem_repetir"},
+        )
+        assert depois.status_code == 201
+        assert depois.json()["questao_ids"] == [criada["id"]]
+
+
+class TestEstatisticasQuestao:
+    def test_estatisticas_sem_respostas(self, client):
+        criada = client.post("/questoes/", json=QUESTAO_VALIDA).json()
+        response = client.get(f"/questoes/{criada['id']}/estatisticas")
+        assert response.status_code == 200
+        data = response.json()
+        assert data["total_respostas"] == 0
+        assert data["mais_escolhida"] is None
+        assert data["taxa_acerto"] is None
+
+    def test_estatisticas_questao_inexistente(self, client):
+        response = client.get("/questoes/999/estatisticas")
+        assert response.status_code == 404
+
+    def test_estatisticas_com_respostas(self, client):
+        criada = client.post("/questoes/", json=QUESTAO_VALIDA).json()
+        questao_id = criada["id"]
+
+        simulado = client.post(
+            "/simulados/",
+            json={"nome": "Teste Estatisticas", "quantidade": 1},
+        ).json()
+        simulado_id = simulado["simulado"]["id"]
+
+        client.post(
+            f"/simulados/{simulado_id}/submeter",
+            json={
+                "respostas": [{"questao_id": questao_id, "alternativa_escolhida": "C"}]
+            },
+        )
+
+        response = client.get(f"/questoes/{questao_id}/estatisticas")
+        assert response.status_code == 200
+        data = response.json()
+        assert data["total_respostas"] == 1
+        assert data["por_alternativa"]["C"] == 1
+        assert data["mais_escolhida"] == "C"
+        assert data["taxa_acerto"] == 100.0

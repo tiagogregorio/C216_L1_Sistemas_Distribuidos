@@ -4,6 +4,7 @@ export default function Navbar({ pagina, setPagina }) {
 		{ id: "novo-simulado", label: "Novo Simulado" },
 		{ id: "historico", label: "Historico" },
 		{ id: "dashboard", label: "Dashboard" },
+		{ id: "relatorio", label: "Relatorio" },
 	];
 
 	return (

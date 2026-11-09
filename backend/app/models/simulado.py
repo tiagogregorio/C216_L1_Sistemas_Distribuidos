@@ -20,6 +20,8 @@ class Simulado(Base):
     total_questoes: Mapped[int] = mapped_column(default=0)
     acertos: Mapped[int | None] = mapped_column(nullable=True)
     nota: Mapped[float | None] = mapped_column(nullable=True)
+    ciclo: Mapped[int] = mapped_column(default=1, server_default="1")
+    """Ciclo de cobertura em que este simulado foi criado (ver CicloCobertura)."""
 
     respostas: Mapped[list["Resposta"]] = relationship(
         back_populates="simulado",

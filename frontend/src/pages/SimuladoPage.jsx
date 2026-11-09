@@ -1,14 +1,36 @@
 import { useEffect, useState } from "react";
 import QuizQuestao from "../components/QuizQuestao";
 import { buscarQuestao, submeterRespostas } from "../services/api";
+import { useSound } from "../sound/SoundContext";
+import {
+	lerProgresso,
+	limparProgresso,
+	salvarProgresso,
+} from "../utils/progressoSimulado";
 
-export default function SimuladoPage({ simuladoId, questaoIds, onVoltar }) {
+export default function SimuladoPage({
+	simuladoId,
+	questaoIds,
+	onVoltar,
+	onParar,
+}) {
+	const progressoSalvo = lerProgresso(simuladoId);
 	const [questoes, setQuestoes] = useState([]);
-	const [indiceAtual, setIndiceAtual] = useState(0);
-	const [respostas, setRespostas] = useState([]);
+	const [indiceAtual, setIndiceAtual] = useState(
+		progressoSalvo?.indiceAtual ?? 0,
+	);
+	const [respostas, setRespostas] = useState(progressoSalvo?.respostas ?? []);
 	const [resultado, setResultado] = useState(null);
 	const [loading, setLoading] = useState(true);
 	const [erro, setErro] = useState(null);
+	const { setMusicaAtiva } = useSound();
+
+	// Musica de fundo toca enquanto o usuario esta no simulado (ajuda na
+	// concentracao) e para automaticamente ao sair desta pagina.
+	useEffect(() => {
+		setMusicaAtiva(true);
+		return () => setMusicaAtiva(false);
+	}, [setMusicaAtiva]);
 
 	useEffect(() => {
 		async function carregarQuestoes() {
@@ -25,6 +47,13 @@ export default function SimuladoPage({ simuladoId, questaoIds, onVoltar }) {
 		carregarQuestoes();
 	}, [questaoIds]);
 
+	// Salva o progresso (questao atual + respostas) a cada mudanca, para que
+	// atualizar a pagina (F5) continue de onde o usuario parou.
+	useEffect(() => {
+		if (resultado) return;
+		salvarProgresso(simuladoId, { indiceAtual, respostas });
+	}, [simuladoId, indiceAtual, respostas, resultado]);
+
 	async function handleResponder(resposta) {
 		const novasRespostas = [...respostas, resposta];
 		setRespostas(novasRespostas);
@@ -40,10 +69,17 @@ export default function SimuladoPage({ simuladoId, questaoIds, onVoltar }) {
 				}));
 				const res = await submeterRespostas(simuladoId, payload);
 				setResultado(res);
+				limparProgresso(simuladoId);
 			} catch (err) {
 				setErro(err.message);
 			}
 		}
+	}
+
+	function handleParar() {
+		// Nao limpa o progresso: o simulado fica salvo para ser retomado
+		// depois pelo botao "Continuar" no Historico.
+		onParar();
 	}
 
 	if (loading) {
@@ -167,13 +203,21 @@ export default function SimuladoPage({ simuladoId, questaoIds, onVoltar }) {
 
 	return (
 		<div className="p-6">
-			<div className="mb-4">
-				<div className="w-full bg-[var(--cor-borda)] rounded-full h-2">
+			<div className="flex items-center gap-4 mb-4">
+				<div className="flex-1 bg-[var(--cor-borda)] rounded-full h-2">
 					<div
 						className="bg-[var(--cor-destaque)] h-2 rounded-full transition-all duration-500"
 						style={{ width: `${((indiceAtual + 1) / questoes.length) * 100}%` }}
 					/>
 				</div>
+				<button
+					type="button"
+					onClick={handleParar}
+					title="Encerra o simulado e volta para o dashboard"
+					className="shrink-0 px-4 py-1.5 rounded-lg border-2 border-red-500/50 text-red-300 text-xs font-bold uppercase tracking-wider hover:bg-red-900/30 transition-colors cursor-pointer"
+				>
+					Parar
+				</button>
 			</div>
 			<QuizQuestao
 				questao={questoes[indiceAtual]}

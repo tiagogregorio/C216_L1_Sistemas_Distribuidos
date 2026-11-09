@@ -13,6 +13,9 @@ class SimuladoCreate(BaseModel):
     ano: int | None = Field(default=None, ge=2004, le=2030)
     tipo: str | None = Field(default=None, pattern=r"^(FG|CE)$")
     dificuldade: str | None = Field(default=None, pattern=r"^(facil|medio|dificil)$")
+    modo: str = Field(default="aleatorio", pattern=r"^(aleatorio|sem_repetir)$")
+    """'aleatorio' pode repetir questoes de simulados anteriores; 
+    'sem_repetir' nunca sorteia uma questao ja respondida antes."""
 
 
 class RespostaSubmit(BaseModel):
@@ -72,3 +75,4 @@ class DashboardResponse(BaseModel):
     taxa_acerto_geral: float
     desempenho_por_ano: list[dict]
     desempenho_por_tipo: list[dict]
+    desempenho_por_assunto: list[dict]

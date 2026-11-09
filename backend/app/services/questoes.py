@@ -99,6 +99,7 @@ class QuestaoService:
             "alternativa_d",
             "alternativa_e",
             "assunto",
+            "imagem",
         ):
             if campo in enviados:
                 alteracoes[campo] = enviados[campo]
@@ -117,6 +118,38 @@ class QuestaoService:
 
     def anos_disponiveis(self) -> list[int]:
         return self.repositorio.anos_disponiveis()
+
+    def estatisticas(self, questao_id: int) -> dict:
+        """Estatisticas de como os usuarios ja responderam esta questao."""
+        questao = self.buscar(questao_id)
+        contagem = self.repositorio.contagem_por_alternativa(questao_id)
+        total = sum(contagem.values())
+
+        mais_escolhida = None
+        if total > 0:
+            mais_escolhida = max(contagem, key=contagem.get)
+            if contagem[mais_escolhida] == 0:
+                mais_escolhida = None
+
+        taxa_acerto = None
+        if total > 0:
+            acertos = contagem.get(questao.resposta, 0)
+            taxa_acerto = round((acertos / total) * 100, 2)
+
+        return {
+            "questao_id": questao_id,
+            "total_respostas": total,
+            "por_alternativa": contagem,
+            "mais_escolhida": mais_escolhida,
+            "taxa_acerto": taxa_acerto,
+        }
+
+    def cobertura(self) -> dict:
+        return self.repositorio.cobertura()
+
+    def reiniciar_cobertura(self) -> dict:
+        self.repositorio.reiniciar_ciclo()
+        return self.repositorio.cobertura()
 
     def resumo(self) -> dict:
         """Retorna um resumo do banco de questoes."""

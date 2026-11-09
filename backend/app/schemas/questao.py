@@ -20,6 +20,8 @@ class QuestaoBase(BaseModel):
     resposta: str = Field(pattern=r"^[A-E]$")
     assunto: str | None = Field(default=None, max_length=100)
     dificuldade: str | None = Field(default=None, pattern=r"^(facil|medio|dificil)$")
+    imagem: str | None = Field(default=None)
+    """Imagem (codigo, diagrama, tabela) da questao como data URI base64."""
 
 
 class QuestaoCreate(QuestaoBase):
@@ -41,6 +43,7 @@ class QuestaoUpdate(BaseModel):
     resposta: str | None = Field(default=None, pattern=r"^[A-E]$")
     assunto: str | None = Field(default=None, max_length=100)
     dificuldade: str | None = Field(default=None, pattern=r"^(facil|medio|dificil)$")
+    imagem: str | None = Field(default=None)
 
 
 class QuestaoResponse(QuestaoBase):
@@ -62,3 +65,13 @@ class QuestaoResumo(BaseModel):
     tipo: str
     assunto: str | None
     dificuldade: str | None
+
+
+class EstatisticasQuestao(BaseModel):
+    """Estatisticas de como os usuarios responderam esta questao ate agora."""
+
+    questao_id: int
+    total_respostas: int
+    por_alternativa: dict[str, int]
+    mais_escolhida: str | None
+    taxa_acerto: float | None

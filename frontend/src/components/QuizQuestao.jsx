@@ -1,14 +1,25 @@
 import { useEffect, useState } from "react";
+import { useSound } from "../sound/SoundContext";
+import AjudasQuiz from "./AjudasQuiz";
 
 export default function QuizQuestao({ questao, numero, total, onResponder }) {
 	const [selecionada, setSelecionada] = useState(null);
 	const [confirmada, setConfirmada] = useState(false);
 	const [tempo, setTempo] = useState(0);
+	const [eliminadas, setEliminadas] = useState([]);
+	const [cartasUsada, setCartasUsada] = useState(false);
+	const [universitariosUsada, setUniversitariosUsada] = useState(false);
+	const [iaUsada, setIaUsada] = useState(false);
+	const { playSelect, playCorrect, playWrong } = useSound();
 
 	useEffect(() => {
 		setSelecionada(null);
 		setConfirmada(false);
 		setTempo(0);
+		setEliminadas([]);
+		setCartasUsada(false);
+		setUniversitariosUsada(false);
+		setIaUsada(false);
 	}, [questao.id]);
 
 	useEffect(() => {
@@ -17,10 +28,36 @@ export default function QuizQuestao({ questao, numero, total, onResponder }) {
 		return () => clearInterval(timer);
 	}, [confirmada, questao.id]);
 
+	function selecionar(letra) {
+		if (confirmada || eliminadas.includes(letra)) return;
+		setSelecionada(letra);
+		playSelect();
+	}
+
+	function usarCartas() {
+		const erradas = ["A", "B", "C", "D", "E"].filter(
+			(letra) => letra !== questao.resposta,
+		);
+		// Elimina uma quantidade aleatoria de alternativas erradas (1 a 4).
+		const quantidade = 1 + Math.floor(Math.random() * erradas.length);
+		const embaralhadas = [...erradas].sort(() => Math.random() - 0.5);
+		const escolhidas = embaralhadas.slice(0, quantidade);
+		setEliminadas(escolhidas);
+		setCartasUsada(true);
+		if (escolhidas.includes(selecionada)) {
+			setSelecionada(null);
+		}
+	}
+
 	function confirmar() {
 		if (!selecionada) return;
 		setConfirmada(true);
 		const correta = selecionada === questao.resposta;
+		if (correta) {
+			playCorrect();
+		} else {
+			playWrong();
+		}
 		setTimeout(() => {
 			onResponder({
 				questao_id: questao.id,
@@ -39,6 +76,9 @@ export default function QuizQuestao({ questao, numero, total, onResponder }) {
 
 	function estiloBotao(letra) {
 		if (!confirmada) {
+			if (eliminadas.includes(letra)) {
+				return "bg-gray-900/40 text-gray-600 border-gray-700/30 opacity-40 line-through cursor-not-allowed";
+			}
 			if (selecionada === letra) {
 				return "bg-gradient-to-r from-yellow-500 to-amber-400 text-gray-900 border-yellow-300 scale-[1.02] shadow-lg shadow-yellow-500/30";
 			}
@@ -94,7 +134,7 @@ export default function QuizQuestao({ questao, numero, total, onResponder }) {
 			<div className="flex items-center gap-2 mb-6">
 				{Array.from({ length: total }, (_, i) => (
 					<div
-						key={i}
+						key={`passo-${i}-de-${total}`}
 						className={`h-2 flex-1 rounded-full transition-all duration-300 ${
 							i < numero
 								? "bg-gradient-to-r from-green-400 to-cyan-400"
@@ -120,8 +160,28 @@ export default function QuizQuestao({ questao, numero, total, onResponder }) {
 					<p className="text-white text-lg leading-relaxed whitespace-pre-line font-medium">
 						{questao.enunciado}
 					</p>
+					{questao.imagem && (
+						<img
+							src={questao.imagem}
+							alt="Codigo, diagrama ou tabela de apoio desta questao"
+							className="mt-4 max-w-full rounded-lg border border-cyan-400/30"
+						/>
+					)}
 				</div>
 			</div>
+
+			{/* Ajudas estilo show de perguntas */}
+			<AjudasQuiz
+				questaoId={questao.id}
+				respostaCorreta={questao.resposta}
+				confirmada={confirmada}
+				cartasUsada={cartasUsada}
+				onUsarCartas={usarCartas}
+				universitariosUsada={universitariosUsada}
+				onUsarUniversitarios={() => setUniversitariosUsada(true)}
+				iaUsada={iaUsada}
+				onUsarIA={() => setIaUsada(true)}
+			/>
 
 			{/* Alternativas - estilo Show do Milhão */}
 			<div className="space-y-3 mb-6">
@@ -129,12 +189,18 @@ export default function QuizQuestao({ questao, numero, total, onResponder }) {
 					<button
 						key={letra}
 						type="button"
-						onClick={() => !confirmada && setSelecionada(letra)}
-						disabled={confirmada}
+						onClick={() => selecionar(letra)}
+						disabled={confirmada || eliminadas.includes(letra)}
 						className={`w-full text-left rounded-xl border-2 transition-all duration-300 cursor-pointer flex items-center overflow-hidden ${estiloBotao(letra)}`}
 					>
 						<div className="bg-black/30 flex items-center justify-center w-14 h-full min-h-[56px] border-r border-white/10">
-							<span className="text-2xl font-black">{num}</span>
+							<span
+								className={`flex items-center justify-center w-9 h-9 rounded-full text-2xl font-black ${
+									selecionada === letra && !confirmada ? "luz-girando" : ""
+								}`}
+							>
+								{num}
+							</span>
 						</div>
 						<div className="px-5 py-3 flex-1">
 							<span className="text-base font-medium">{texto}</span>

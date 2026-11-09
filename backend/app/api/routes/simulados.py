@@ -42,6 +42,13 @@ def dashboard(service: SimuladoService = Depends(get_simulado_service)):
     return service.dashboard()
 
 
+@router.get("/relatorio")
+def relatorio(service: SimuladoService = Depends(get_simulado_service)):
+    """Relatorio completo: desempenho geral, prioridades de estudo (assuntos
+    mais fracos) e a lista de questoes que o usuario errou, para revisao."""
+    return service.relatorio()
+
+
 @router.post("/", status_code=201)
 def criar_simulado(
     dados: SimuladoCreate,

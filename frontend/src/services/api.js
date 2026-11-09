@@ -55,6 +55,22 @@ export function anosDisponiveis() {
 	return request("/questoes/anos");
 }
 
+export function estatisticasQuestao(id) {
+	return request(`/questoes/${id}/estatisticas`);
+}
+
+export function assistenteIA(id) {
+	return request(`/questoes/${id}/assistente-ia`, { method: "POST" });
+}
+
+export function coberturaQuestoes() {
+	return request("/questoes/cobertura");
+}
+
+export function reiniciarCobertura() {
+	return request("/questoes/cobertura/reiniciar", { method: "POST" });
+}
+
 // === Simulados ===
 
 export function listarSimulados() {
@@ -85,6 +101,10 @@ export function submeterRespostas(id, respostas) {
 
 export function removerSimulado(id) {
 	return request(`/simulados/${id}`, { method: "DELETE" });
+}
+
+export function relatorioSimulados() {
+	return request("/simulados/relatorio");
 }
 
 export function dashboard() {

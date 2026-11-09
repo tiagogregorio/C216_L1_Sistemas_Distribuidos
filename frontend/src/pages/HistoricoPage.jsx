@@ -1,10 +1,16 @@
 import { useEffect, useState } from "react";
-import { listarSimulados, removerSimulado } from "../services/api";
+import {
+	listarSimulados,
+	questoesDoSimulado,
+	removerSimulado,
+} from "../services/api";
+import { limparProgresso } from "../utils/progressoSimulado";
 
-export default function HistoricoPage() {
+export default function HistoricoPage({ onContinuar }) {
 	const [simulados, setSimulados] = useState([]);
 	const [loading, setLoading] = useState(true);
 	const [erro, setErro] = useState(null);
+	const [continuando, setContinuando] = useState(null);
 
 	async function carregar() {
 		setLoading(true);
@@ -26,9 +32,25 @@ export default function HistoricoPage() {
 		if (!confirm("Remover este simulado?")) return;
 		try {
 			await removerSimulado(id);
+			limparProgresso(id);
 			carregar();
 		} catch (err) {
 			setErro(err.message);
+		}
+	}
+
+	async function handleContinuar(id) {
+		setContinuando(id);
+		setErro(null);
+		try {
+			const questoes = await questoesDoSimulado(id);
+			onContinuar(
+				id,
+				questoes.map((q) => q.id),
+			);
+		} catch (err) {
+			setErro(err.message);
+			setContinuando(null);
 		}
 	}
 
@@ -87,7 +109,19 @@ export default function HistoricoPage() {
 										</div>
 									</div>
 								) : (
-									<span className="text-yellow-400 text-sm">Em andamento</span>
+									<div className="flex items-center gap-3">
+										<span className="text-yellow-400 text-sm">
+											Em andamento
+										</span>
+										<button
+											type="button"
+											onClick={() => handleContinuar(s.id)}
+											disabled={continuando === s.id}
+											className="text-[var(--cor-destaque)] hover:brightness-110 text-sm font-bold cursor-pointer disabled:opacity-50"
+										>
+											{continuando === s.id ? "Abrindo..." : "Continuar"}
+										</button>
+									</div>
 								)}
 								<button
 									type="button"
