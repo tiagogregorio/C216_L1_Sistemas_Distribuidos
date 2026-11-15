@@ -5,6 +5,7 @@ from fastapi.middleware.cors import CORSMiddleware
 
 from app.api.routes import health, questoes, simulados
 from app.core.config import CORS_ORIGINS
+from app.core.erros import registrar_tratamento_de_erros
 
 app = FastAPI(
     title="ENADE Study Platform",
@@ -19,6 +20,8 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
+
+registrar_tratamento_de_erros(app, CORS_ORIGINS)
 
 app.include_router(health.router)
 app.include_router(questoes.router)
