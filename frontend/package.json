@@ -6,8 +6,11 @@
   "scripts": {
     "dev": "vite",
     "build": "vite build",
-    "lint": "oxlint",
-    "preview": "vite preview"
+    "lint": "biome check src/",
+    "format": "biome check --write src/",
+    "preview": "vite preview",
+    "test": "vitest run",
+    "test:e2e": "playwright test"
   },
   "dependencies": {
     "react": "^19.3.1",
@@ -24,7 +27,6 @@
     "@types/react-dom": "^19.3.0",
     "@vitejs/plugin-react": "^6.1.2",
     "jsdom": "^31.0.0",
-    "oxlint": "^1.90.0",
     "tailwindcss": "^4.3.5",
     "vite": "^8.3.6",
     "vitest": "^5.1.0"
