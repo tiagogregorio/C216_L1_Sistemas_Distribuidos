@@ -1,293 +1,348 @@
 # ENADE Study Platform
 
-Plataforma de estudos para o ENADE de Engenharia de Computacao, com quiz interativo inspirado no Show do Milhao, cronometro por questao, correcao automatica e dashboard de desempenho.
+Plataforma web de estudos para o ENADE de Engenharia de Computacao: um banco de questoes reais das provas, simulados cronometrados no estilo "Show do Milhao" e relatorios que mostram o que estudar primeiro.
 
 Projeto Final da disciplina **C216 - Sistemas Distribuidos** (Inatel, 2026/2).
 
+## Objetivo e tema
+
+As provas do ENADE sao distribuidas em PDF: nao ha como treinar com tempo, repetir so o que ainda nao foi visto ou saber em quais assuntos o desempenho e pior. A plataforma resolve esse problema com:
+
+- um **banco de questoes** objetivas (ENADE 2014, 2019 e 2023) com gabarito oficial;
+- **simulados** com cronometro por questao, ajudas e correcao automatica;
+- **dashboard e relatorio** de desempenho por ano, tipo e assunto.
+
 ## Funcionalidades
 
-- **Banco de questoes (CRUD completo)**: criar, listar com filtros (ano/fonte, tipo, dificuldade, assunto), editar e excluir questoes, com imagem opcional (ex.: circuitos) e nome livre da prova (nao apenas o ano).
-- **Importacao de PDF**: envia o PDF da prova, o backend extrai texto/gabarito (`pdftotext`), mostra as questoes encontradas e voce escolhe quais salvar (uma, varias ou todas). Evita duplicadas e guarda a pagina original do PDF ("Ver pagina do PDF").
-- **Simulados estilo Show do Milhao**: cronometro por questao, luz girando no numero, efeitos sonoros e musica de fundo (com volume), navegacao voltar/avancar, avanco automatico, botao PARAR (mantem o progresso) e "Continuar" no historico.
-- **Tres modos de simulado**: aleatorio, **sem repetir** (barra de cobertura do banco; ao completar 100% e possivel reiniciar o ciclo sem apagar historico) e **manual** (voce marca exatamente as questoes).
-- **Ajudas**: Cartas (elimina 1 a 4 alternativas erradas), Universitarios (votacao simulada) e **Assistente IA** (Google Gemini, opcional).
-- **Nota transparente**: nota estilo ENADE (nao respondida conta como erro) e segunda metrica "acerto nas respondidas".
-- **Dashboard e Relatorio**: desempenho por ano, tipo e assunto, tempo medio e "O que estudar primeiro", alem de lista das questoes erradas.
-- **Classificacao automatica por IA**: o Gemini classifica assunto/tipo das questoes importadas (em lotes).
-- **Seeds com questoes reais**: ENADE 2014, 2019 e 2023 com gabarito oficial.
+- **Banco de questoes (CRUD completo pela interface)**: cadastrar, listar com filtros (ano e tipo), editar e remover questoes, com imagem opcional (ex.: circuitos) e nome livre da prova de origem.
+- **Simulados estilo Show do Milhao**: cronometro por questao, efeitos sonoros, musica de fundo com controle de volume, navegacao voltar/avancar, avanco automatico, botao PARAR (mantem o progresso) e "Continuar" no historico.
+- **Tres modos de simulado**: aleatorio, **sem repetir** (barra de cobertura do banco; ao chegar a 100% e possivel reiniciar o ciclo sem apagar o historico) e **manual** (o usuario marca exatamente as questoes).
+- **Ajudas**: Cartas (elimina de 1 a 4 alternativas erradas), Universitarios (votacao) e Assistente IA (opcional).
+- **Nota transparente**: nota estilo ENADE (questao nao respondida conta como erro) e a metrica "acerto nas respondidas".
+- **Dashboard e Relatorio**: desempenho por ano, tipo e assunto, tempo medio por questao, "O que estudar primeiro" e lista das questoes erradas.
+- **Importacao de PDF** (extra): envia o PDF de uma prova, o backend extrai as questoes e o gabarito e o usuario escolhe quais salvar; a pagina original fica disponivel no simulado ("Ver pagina do PDF").
+- **Assistente de IA** (extra, opcional): explicacao da questao e classificacao por assunto com o Google Gemini. Sem chave configurada, o resto da aplicacao funciona normalmente.
 
-## Stack
+## Tecnologias
 
-| Camada     | Tecnologia                          |
-|------------|-------------------------------------|
-| Backend    | FastAPI, SQLAlchemy, Alembic, Poetry|
-| Frontend   | React, Vite, Tailwind CSS, Biome   |
-| Banco      | PostgreSQL 16                       |
-| IA (opcional) | Google Gemini (apenas no backend) |
-| Infra      | Docker, Docker Compose              |
-| Testes     | Pytest, Vitest, Playwright          |
-| CI         | GitHub Actions                      |
-| Lint       | Ruff (backend), Biome (frontend)    |
+| Camada        | Tecnologia                                          |
+|---------------|-----------------------------------------------------|
+| Backend       | Python 3.12, FastAPI, Pydantic, SQLAlchemy, Alembic |
+| Dependencias  | Poetry (backend), npm (frontend)                    |
+| Frontend      | React, Vite, Tailwind CSS (JavaScript)              |
+| Banco         | PostgreSQL 16                                       |
+| Infra         | Docker, Docker Compose, Makefile                    |
+| Testes        | Pytest, Vitest + Testing Library, Playwright        |
+| Lint/formato  | Ruff (backend), Biome (frontend)                    |
+| CI            | GitHub Actions                                      |
 
-## Estrutura do Projeto
+## Arquitetura
+
+```
+Navegador
+   |  http://localhost:3000
+   v
+frontend (React compilado, servido pelo nginx)
+   |  HTTP + JSON  ->  http://localhost:8000   (CORS com origens explicitas)
+   v
+backend (FastAPI)
+   rotas  ->  servicos  ->  repositorios  ->  models
+   (HTTP)     (regras)      (SQLAlchemy)      (tabelas)
+   |
+   v
+db (PostgreSQL 16, volume postgres_data, esquema versionado pelo Alembic)
+```
+
+- **Rotas** (`app/api/routes`): recebem a requisicao, validam o corpo com os **schemas** Pydantic e convertem erros em codigos HTTP (404, 409, 422, 503).
+- **Servicos** (`app/services`): regras de negocio (validacoes, correcao do simulado, modos de sorteio). Nao conhecem HTTP nem SQL.
+- **Repositorios** (`app/repositories`): consultas e gravacoes com SQLAlchemy.
+- **Models** (`app/models`): tabelas `questoes`, `simulados`, `respostas` e `ciclo_cobertura`.
+- **Frontend**: paginas em `src/pages`, componentes em `src/components` e toda a comunicacao HTTP em `src/services/api.js`, com estados de carregamento, sucesso e erro.
+
+## Estrutura do projeto
 
 ```
 .
 ├── backend/
 │   ├── app/
-│   │   ├── api/routes/          # Rotas REST (health, questoes, simulados)
-│   │   ├── core/config.py       # Variaveis de ambiente
-│   │   ├── database/            # Engine, sessao e base ORM
-│   │   ├── models/              # Modelos SQLAlchemy (Questao, Simulado, Resposta)
-│   │   ├── repositories/        # Acesso ao banco de dados
-│   │   ├── schemas/             # Schemas Pydantic (validacao)
-│   │   ├── services/            # Regras de negocio
-│   │   ├── seed.py              # Script de seed com questoes do ENADE
-│   │   └── main.py              # Aplicacao FastAPI
-│   ├── alembic/                 # Migracoes do banco de dados
+│   │   ├── api/routes/        # Rotas REST: health, questoes, simulados
+│   │   ├── core/              # config.py (variaveis de ambiente) e erros.py (erros 500 com CORS)
+│   │   ├── database/          # Engine, sessao e base ORM
+│   │   ├── models/            # Questao, Simulado, Resposta, CicloCobertura
+│   │   ├── repositories/      # Acesso ao banco (SQLAlchemy)
+│   │   ├── schemas/           # Schemas Pydantic (validacao e respostas)
+│   │   ├── services/          # Regras de negocio, importacao de PDF e assistente de IA
+│   │   ├── tools/             # Ferramentas de linha de comando (PDF, duplicadas)
+│   │   ├── seed.py            # Questoes do ENADE 2014 e 2019
+│   │   ├── seed_2023.py       # Questoes do ENADE 2023
+│   │   └── main.py            # Aplicacao FastAPI, CORS e tratamento de erros
+│   ├── alembic/versions/      # 7 migracoes versionadas
 │   ├── tests/
-│   │   ├── unit/                # Testes unitarios (validacoes)
-│   │   └── integration/         # Testes de integracao (endpoints)
+│   │   ├── unit/              # Regras de negocio e funcoes puras
+│   │   └── integration/       # Endpoints (TestClient)
 │   ├── Dockerfile
-│   ├── pyproject.toml
-│   └── alembic.ini
+│   ├── pyproject.toml         # Dependencias (Poetry), Pytest e Ruff
+│   └── poetry.lock
 ├── frontend/
 │   ├── src/
-│   │   ├── components/          # Navbar, QuestaoForm, QuizQuestao
-│   │   ├── pages/               # Dashboard, Questoes, NovoSimulado, Simulado, Historico
-│   │   ├── services/api.js      # Camada HTTP
-│   │   ├── validation.js        # Validacoes do frontend
-│   │   ├── App.jsx              # Componente raiz com navegacao
-│   │   └── main.jsx             # Entry point
-│   ├── tests/
-│   │   ├── e2e/                 # Testes E2E com Playwright
-│   │   ├── App.test.jsx         # Testes de componente
-│   │   └── validation.test.js   # Testes de validacao
-│   ├── Dockerfile
+│   │   ├── components/        # Navbar, QuestaoForm, QuizQuestao, AjudasQuiz, SoundToggle
+│   │   ├── pages/             # Dashboard, Questoes, ImportarPdf, NovoSimulado, Simulado, Historico, Relatorio
+│   │   ├── services/api.js    # Camada HTTP (fetch) e mensagens de erro
+│   │   ├── sound/             # Efeitos sonoros e musica de fundo
+│   │   ├── utils/             # Progresso do simulado e redimensionamento de imagem
+│   │   ├── validation.js      # Validacoes dos formularios
+│   │   └── App.jsx            # Componente raiz e navegacao
+│   ├── tests/                 # Vitest + Testing Library
+│   │   └── e2e/               # Playwright (aplicacao real)
+│   ├── Dockerfile             # Build com Node e entrega com nginx
 │   ├── nginx.conf
+│   ├── biome.json
 │   └── playwright.config.js
-├── .github/workflows/           # CI: backend.yml e frontend.yml
-├── docker-compose.yml           # Orquestracao dos 3 servicos
-├── Makefile                     # Comandos documentados
-├── .env.example                 # Variaveis de ambiente (sem segredos)
+├── .github/workflows/         # backend.yml e frontend.yml (CI)
+├── docker-compose.yml         # db + backend + frontend
+├── Makefile                   # Comandos de execucao, testes e manutencao
+├── .env.example               # Variaveis de ambiente (sem segredos)
 └── README.md
 ```
 
 ## Pre-requisitos
 
 - Docker e Docker Compose
-- Node.js 22+ (para desenvolvimento local do frontend)
-- Python 3.12+ e Poetry (para desenvolvimento local do backend)
+- GNU Make (no Windows, use o **Git Bash** ou o WSL para os comandos `make`)
+- Node.js 22+ (apenas para rodar os testes do frontend e os testes E2E)
 
-## Variaveis de Ambiente
+## Variaveis de ambiente
 
-Copie o `.env.example` para `.env` na raiz do projeto:
-
-```bash
-cp .env.example .env
-```
-
-| Variavel           | Descricao                     | Padrao                    |
-|--------------------|-------------------------------|---------------------------|
-| POSTGRES_USER      | Usuario do PostgreSQL         | postgres                  |
-| POSTGRES_PASSWORD  | Senha do PostgreSQL           | postgres                  |
-| POSTGRES_DB        | Nome do banco                 | enade_platform            |
-| FRONTEND_URL       | URL do frontend (CORS)        | http://localhost:5173      |
-| CORS_ORIGINS       | Origens permitidas (CORS)     | http://localhost:5173,...  |
-| VITE_API_URL       | URL da API para o frontend    | http://localhost:8000      |
-| GEMINI_API_KEY     | Chave do Gemini (opcional)    | vazio                     |
-| GEMINI_MODEL       | Modelo do Gemini              | gemini-2.5-flash          |
-| GEMINI_API_KEY     | Chave da API do Google Gemini (opcional, para o "Assistente IA") | vazio |
-| GEMINI_MODEL       | Modelo do Gemini usado pelo assistente | gemini-2.5-flash |
-
-## Como Executar
-
-### Com Docker Compose (recomendado)
+As configuracoes ficam em um arquivo `.env` na raiz, lido pelo Docker Compose. O `.env.example` e o modelo versionado, sem segredos; o `.env` real esta no `.gitignore`.
 
 ```bash
-# 1. Copie as variaveis de ambiente
-cp .env.example .env
-
-# 2. Sobe os 3 servicos (db, backend, frontend)
-make up
-
-# 3. Aplica as migracoes do banco (SEMPRE depois do make up)
-make db-upgrade
-
-# 4. Popula com questoes do ENADE
-make seed
-make seed-2023
-
-# 5. Acesse no navegador
-# Frontend: http://localhost:3000
-# API Swagger: http://localhost:8000/docs
+make env        # cria o .env a partir do .env.example (nao sobrescreve)
 ```
 
-### Desenvolvimento Local
+| Variavel          | Descricao                                    | Padrao                |
+|-------------------|----------------------------------------------|-----------------------|
+| POSTGRES_USER     | Usuario do PostgreSQL                        | postgres              |
+| POSTGRES_PASSWORD | Senha do PostgreSQL                          | postgres              |
+| POSTGRES_DB       | Nome do banco                                | enade_platform        |
+| API_PORT          | Porta da API no host                         | 8000                  |
+| FRONTEND_PORT     | Porta do frontend no host                    | 3000                  |
+| FRONTEND_URL      | Origem do frontend em desenvolvimento (CORS) | http://localhost:5173 |
+| VITE_API_URL      | Endereco da API usado pelo frontend          | http://localhost:8000 |
+| GEMINI_API_KEY    | Chave do Google Gemini (opcional)            | vazio                 |
+| GEMINI_MODEL      | Modelo do Gemini                             | gemini-2.5-flash      |
+
+O CORS aceita apenas as origens `http://localhost:3000` (frontend no Docker) e `http://localhost:5173` (frontend em desenvolvimento) e os metodos GET, POST, PUT, PATCH, DELETE e OPTIONS.
+
+## Como executar
+
+### Inicio rapido
 
 ```bash
-# Sobe db + backend via Docker
-make up
-
-# Frontend com hot reload
-cd frontend && npm install && npm run dev
-# Acesse: http://localhost:5173
+make setup
 ```
+
+Esse comando cria o `.env`, sobe os tres containers, aplica as migracoes e popula o banco.
+
+### Passo a passo
+
+```bash
+make env          # 1. cria o .env
+make up           # 2. sobe db, backend e frontend (docker compose up -d --build)
+make ps           # 3. confere se os tres servicos estao de pe
+make db-upgrade   # 4. aplica as migracoes (sempre depois do make up)
+make seed         # 5. insere 15 questoes do ENADE 2014 e 2019
+make seed-2023    # 6. insere 13 questoes do ENADE 2023
+```
+
+### Acesso
+
+| O que                 | Endereco                     |
+|-----------------------|------------------------------|
+| Aplicacao (frontend)  | http://localhost:3000        |
+| Documentacao da API   | http://localhost:8000/docs   |
+| Verificacao de saude  | http://localhost:8000/health |
+
+Para parar: `make down`. Para parar e apagar o banco: `make down-v`.
+
+### Desenvolvimento local do frontend
+
+```bash
+make up              # db + backend no Docker
+make front-install   # dependencias do frontend
+```
+
+Depois, dentro da pasta `frontend`, o comando `npm run dev` inicia o Vite com recarga automatica em http://localhost:5173.
 
 ## Comandos do Makefile
 
-| Comando          | Descricao                                      |
-|------------------|-------------------------------------------------|
-| `make help`      | Mostra todos os comandos disponiveis            |
-| `make up`        | Sobe os containers (db + backend + frontend)    |
-| `make down`      | Para os containers                              |
-| `make down-v`    | Para containers e remove volumes                |
-| `make build`     | Rebuild sem cache                               |
-| `make logs`      | Mostra logs em tempo real                       |
-| `make db-upgrade`| Aplica migracoes pendentes                      |
-| `make db-history`| Mostra historico de migracoes                   |
-| `make seed`      | Popula o banco com questoes do ENADE 2014/2019  |
-| `make seed-2023` | Adiciona as questoes do ENADE 2023 (idempotente) |
-| `make test`      | Roda todos os testes (backend + frontend)       |
-| `make test-back` | Roda testes do backend (Pytest)                 |
-| `make lint`      | Verifica lint (Ruff + Biome)                    |
-| `make format`    | Formata codigo (Ruff + Biome)                   |
-| `make back-sh`   | Abre shell no backend                           |
-| `make db-sh`     | Abre psql no banco                              |
+`make help` lista todos os comandos. Cada um e um atalho para um comando `docker compose` ou `npx`.
+
+| Comando                   | O que faz                                                    |
+|---------------------------|--------------------------------------------------------------|
+| `make setup`              | Prepara tudo do zero (.env, containers, migracoes e seeds)   |
+| `make env`                | Cria o `.env` a partir do `.env.example`                     |
+| `make up`                 | Sobe os containers (`docker compose up -d --build`)          |
+| `make down`               | Para os containers                                           |
+| `make down-v`             | Para os containers e remove o volume do banco                |
+| `make build`              | Reconstroi as imagens sem cache                              |
+| `make restart`            | Reinicia os containers                                       |
+| `make ps`                 | Mostra o estado dos containers                               |
+| `make logs`               | Mostra os logs em tempo real                                 |
+| `make db-upgrade`         | Aplica as migracoes pendentes (`alembic upgrade head`)       |
+| `make db-current`         | Mostra a migracao aplicada no banco                          |
+| `make db-history`         | Mostra o historico de migracoes                              |
+| `make db-downgrade`       | Reverte a ultima migracao                                    |
+| `make db-ultimas`         | Mostra as ultimas questoes gravadas no PostgreSQL            |
+| `make seed`               | Insere as questoes do ENADE 2014 e 2019                      |
+| `make seed-2023`          | Insere as questoes do ENADE 2023 (nao duplica)               |
+| `make front-install`      | Instala as dependencias do frontend (`npm ci`)               |
+| `make e2e-install`        | Instala o navegador do Playwright                            |
+| `make test`               | Roda os testes do backend e do frontend                      |
+| `make test-back`          | Testes do backend (Pytest, dentro do container)              |
+| `make test-front`         | Testes do frontend (Vitest)                                  |
+| `make test-e2e`           | Testes E2E (Playwright) contra a aplicacao em execucao       |
+| `make lint`               | Lint e formatacao: Ruff (backend) e Biome (frontend)         |
+| `make format`             | Formata o codigo com Ruff e Biome                            |
+| `make check-all`          | Lint + testes                                                |
+| `make back-sh`            | Abre um shell no container do backend                        |
+| `make db-sh`              | Abre o `psql` no banco                                       |
+| `make front-sh`           | Abre um shell no container do frontend                       |
+| `make duplicadas`         | Lista questoes duplicadas (mesmo ano e numero)               |
+| `make remover-duplicadas` | Remove duplicadas que nao estao em nenhum simulado           |
+| `make limpar-lixo`        | Remove rodape/codigo de barras de questoes importadas de PDF |
+| `make fix-q10-2023`       | Recoloca a imagem da Questao 10 do ENADE 2023                |
 
 ## Migracoes
 
+O esquema do banco e versionado com Alembic (`backend/alembic/versions`):
+
+| Ordem | Revisao        | O que faz                                             |
+|-------|----------------|-------------------------------------------------------|
+| 1     | `56d0baaf5b21` | Cria as tabelas `questoes`, `simulados` e `respostas` |
+| 2     | `a1b2c3d4e5f6` | Adiciona dificuldade e tempo de resposta              |
+| 3     | `c3d4e5f6a7b8` | Adiciona imagem a questao                             |
+| 4     | `d4e5f6a7b8c9` | Cria o ciclo de cobertura (modo "sem repetir")        |
+| 5     | `e5f6a7b8c9d0` | Guarda quantas questoes foram respondidas no simulado |
+| 6     | `f6a7b8c9d0e1` | Adiciona `fonte` (nome livre da prova)                |
+| 7     | `g7b8c9d0e1f2` | Guarda a pagina original do PDF                       |
+
 ```bash
-make db-upgrade    # Aplicar migracoes
-make db-downgrade  # Reverter ultima
-make db-history    # Ver historico
+make db-upgrade    # aplica todas as migracoes pendentes
+make db-current    # deve mostrar g7b8c9d0e1f2 (head)
+make db-history    # historico
+make db-downgrade  # reverte a ultima
 ```
-
-Migracoes existentes:
-1. `56d0baaf5b21` - Cria tabelas questoes, simulados e respostas
-2. `a1b2c3d4e5f6` - Adiciona campos dificuldade e tempo de resposta
-3. `c3d4e5f6a7b8` - Adiciona imagem a questao
-4. `d4e5f6a7b8c9` - Ciclos de cobertura (modo "sem repetir")
-5. `e5f6a7b8c9d0` - Guarda quantas questoes foram respondidas no simulado
-6. `f6a7b8c9d0e1` - Campo `fonte` (nome livre da prova)
-7. `g7b8c9d0e1f2` - Guarda a pagina original do PDF
-
-Para conferir: `docker compose exec backend alembic current` (deve mostrar `g7b8c9d0e1f2 (head)`).
-3. `c3d4e5f6a7b8` - Adiciona imagem a questao
-4. `d4e5f6a7b8c9` - Adiciona ciclo de cobertura (modo "sem repetir")
-5. `e5f6a7b8c9d0` - Adiciona respondidas ao simulado
-6. `f6a7b8c9d0e1` - Adiciona fonte (nome livre) a questao
 
 ## Testes
 
 ```bash
-# Todos os testes
-make test
-
-# Backend (79 testes Pytest: unitarios + integracao)
-make test-back
-
-# Frontend (39 testes Vitest + Testing Library)
-cd frontend && npx vitest run
-
-# E2E com Playwright (5 testes; requer a aplicacao rodando via Docker Compose em
-# localhost:3000, com migracoes e seed aplicados). Inclui o teste de persistencia
-# real: cadastra uma questao pela interface, recarrega, confere na API e remove.
-cd frontend
-npm ci
-npx playwright install chromium
-npx playwright test
+make test-back       # 79 testes Pytest (regras de negocio e endpoints)
+make front-install   # uma vez, antes dos testes do frontend
+make test-front      # 39 testes Vitest + Testing Library (componentes e fluxos)
+make lint            # Ruff e Biome
 ```
 
-## Importando questoes de novas provas (PDF)
+Os testes do backend usam um SQLite em memoria (fixtures em `backend/tests/conftest.py`), entao nao alteram o banco do Docker.
 
-O projeto inclui uma ferramenta semi-automatizada para extrair questoes
-objetivas de provas em PDF (ENADE ou similar, como provas do Inatel):
+### Testes E2E (Playwright)
+
+Os testes E2E exercitam o sistema inteiro (frontend, API e PostgreSQL) e precisam da aplicacao em execucao em http://localhost:3000, com migracoes e seeds aplicados:
 
 ```bash
-docker compose exec backend python -m app.tools.extrair_enade \
-  /caminho/para/prova.pdf 2024 --inicio-ce 10
+make front-install   # uma vez
+make e2e-install     # uma vez: baixa o navegador do Playwright
+make test-e2e        # 5 testes
 ```
 
-Isso gera um rascunho `.py`, uma pagina JPEG por folha do PDF (para
-localizar figuras) e um relatorio apontando quais questoes precisam de
-revisao manual. Depois de revisar o rascunho e decidir quais questoes
-precisam de imagem, use `app.tools.imagem_para_data_uri` para converter
-um recorte de imagem no formato que o banco espera. Veja os comentarios
-no topo de `backend/app/tools/extrair_enade.py` para o passo a passo
-completo — a extracao de texto/gabarito e automatica, mas anexar
-imagens e revisar o conteudo continua manual, por design.
+O teste `frontend/tests/e2e/persistencia.spec.js` cadastra uma questao pela interface, recarrega a pagina, confere pela API que ela foi gravada, edita, remove e confere novamente. Para apontar para outros enderecos, defina `E2E_BASE_URL` e `E2E_API_URL`.
 
-### Pagina original do PDF, IA e manutencao
+### Integracao continua
 
-- **Ver pagina do PDF**: ao importar, deixe marcada a opcao de anexar a pagina
-  original; no simulado aparece o botao "Ver pagina do PDF" para conferir a
-  questao como esta na prova. Reimportar um PDF cujas questoes ja existem **nao
-  duplica**: so anexa a pagina.
-- **IA (Gemini)**: a tela de importacao mostra se a chave esta configurada e
-  tem o botao "Testar conexao". Tambem da para diagnosticar pelo navegador em
-  `http://localhost:8000/questoes/ia/status?testar=true` (nunca exibe a chave).
-  Rode os comandos `docker compose` na raiz do projeto, junto ao arquivo `.env`.
-- **Manutencao do banco**: `make limpar-lixo` (rodape/codigo de barras que
-  vieram do PDF), `make duplicadas` e `make remover-duplicadas`.
+O GitHub Actions roda dois workflows em cada push na `projeto-final` e em cada Pull Request para a `main`:
+
+- **Backend CI** (`.github/workflows/backend.yml`): `ruff check`, `ruff format --check` e `pytest`.
+- **Frontend CI** (`.github/workflows/frontend.yml`): `biome check` e `vitest`.
+
+Os testes E2E nao rodam no CI porque dependem dos tres containers em execucao.
 
 ## Endpoints da API
 
+A documentacao interativa fica em http://localhost:8000/docs.
+
 ### Health
-| Metodo | Rota       | Descricao             |
-|--------|------------|-----------------------|
-| GET    | /health    | Status da API         |
+
+| Metodo | Rota    | Descricao     |
+|--------|---------|---------------|
+| GET    | /health | Status da API |
 
 ### Questoes
-| Metodo | Rota                | Descricao                     |
-|--------|---------------------|-------------------------------|
-| GET    | /questoes/          | Lista questoes com filtros    |
-| POST   | /questoes/          | Cadastra nova questao         |
-| GET    | /questoes/resumo    | Estatisticas do banco         |
-| GET    | /questoes/anos      | Anos disponiveis              |
-| GET    | /questoes/cobertura | Quantas questoes ja foram respondidas (modo sem repetir) |
-| POST   | /questoes/cobertura/reiniciar | Inicia um novo ciclo de cobertura |
-| POST   | /questoes/{id}/assistente-ia | Explicacao da questao via Gemini |
-| POST   | /questoes/importar-pdf | Extrai rascunho de questoes de um PDF (nao grava) |
-| POST   | /questoes/classificar-lote | Assunto e dificuldade de varias questoes via Gemini |
-| GET    | /questoes/ia/status | Diz se a IA esta configurada (`?testar=true` testa a chave) |
-| GET    | /questoes/{id}      | Busca questao por ID          |
-| PUT    | /questoes/{id}      | Substitui questao             |
-| PATCH  | /questoes/{id}      | Atualiza parcialmente         |
-| DELETE | /questoes/{id}      | Remove questao                |
 
-Tambem: `GET /questoes/cobertura`, `POST /questoes/cobertura/reiniciar`, `GET /questoes/{id}/estatisticas`,
-`POST /questoes/importar-pdf`, `POST /questoes/classificar-lote`, `GET /questoes/ia/status`,
-`POST /questoes/{id}/assistente-ia`.
+| Metodo | Rota                          | Descricao                                                 |
+|--------|-------------------------------|-----------------------------------------------------------|
+| GET    | /questoes/                    | Lista questoes (filtros: ano, tipo, assunto, dificuldade) |
+| POST   | /questoes/                    | Cadastra uma questao                                      |
+| GET    | /questoes/{id}                | Busca uma questao                                         |
+| PUT    | /questoes/{id}                | Substitui uma questao                                     |
+| PATCH  | /questoes/{id}                | Atualiza parcialmente uma questao                         |
+| DELETE | /questoes/{id}                | Remove uma questao                                        |
+| GET    | /questoes/resumo              | Totais do banco de questoes                               |
+| GET    | /questoes/anos                | Anos com questoes cadastradas                             |
+| GET    | /questoes/cobertura           | Cobertura do banco no modo "sem repetir"                  |
+| POST   | /questoes/cobertura/reiniciar | Inicia um novo ciclo de cobertura                         |
+| GET    | /questoes/{id}/estatisticas   | Como a questao ja foi respondida                          |
+| POST   | /questoes/importar-pdf        | Extrai questoes de um PDF (nao grava)                     |
+| GET    | /questoes/ia/status           | Informa se a IA esta configurada                          |
+| POST   | /questoes/classificar-lote    | Classifica questoes por assunto (Gemini)                  |
+| POST   | /questoes/{id}/assistente-ia  | Explicacao da questao (Gemini)                            |
 
 ### Simulados
-| Metodo | Rota                           | Descricao                      |
-|--------|--------------------------------|--------------------------------|
-| GET    | /simulados/                    | Lista simulados                |
-| POST   | /simulados/                    | Gera novo simulado             |
-| GET    | /simulados/dashboard           | Estatisticas de desempenho     |
-| GET    | /simulados/relatorio           | Relatorio e prioridades        |
-| GET    | /simulados/relatorio           | Relatorio de revisao (questoes erradas, prioridades) |
-| GET    | /simulados/{id}                | Detalhes do simulado           |
-| GET    | /simulados/{id}/questoes       | Questoes do simulado           |
-| POST   | /simulados/{id}/submeter       | Submete respostas e corrige    |
-| DELETE | /simulados/{id}                | Remove simulado                |
 
-## Assistente de IA (Gemini) - opcional
+| Metodo | Rota                     | Descricao                                           |
+|--------|--------------------------|-----------------------------------------------------|
+| GET    | /simulados/              | Lista os simulados                                  |
+| POST   | /simulados/              | Cria um simulado (aleatorio, sem repetir ou manual) |
+| GET    | /simulados/{id}          | Detalhes e respostas de um simulado                 |
+| GET    | /simulados/{id}/questoes | Questoes de um simulado                             |
+| POST   | /simulados/{id}/submeter | Envia as respostas e corrige                        |
+| DELETE | /simulados/{id}          | Remove um simulado                                  |
+| GET    | /simulados/dashboard     | Estatisticas de desempenho                          |
+| GET    | /simulados/relatorio     | Prioridades de estudo e questoes erradas            |
 
-A chave fica **somente no backend** (arquivo `.env`, que esta no `.gitignore`); o navegador nunca a ve.
-Para usar: crie uma chave gratuita em https://aistudio.google.com/apikey, cole em `GEMINI_API_KEY=` no `.env`
-e rode `docker compose up -d --build`. Sem chave, a API responde 503 com mensagem clara e todo o resto funciona.
-O avaliador pode usar a propria chave da mesma forma.
+### Tratamento de erros
 
-## Testes e CI
+| Codigo | Quando acontece                                                  |
+|--------|------------------------------------------------------------------|
+| 404    | Questao ou simulado inexistente                                  |
+| 409    | Simulado ja finalizado                                           |
+| 422    | Dados invalidos (validacao dos schemas ou das regras de negocio) |
+| 503    | Assistente de IA sem chave configurada                           |
+| 500    | Erro inesperado: a resposta traz a causa e mantem os cabecalhos de CORS, para o frontend mostrar a mensagem em vez de "NetworkError" |
 
-- Backend: `make test-back` (Pytest, SQLite em memoria nas fixtures) e lint `ruff check` + `ruff format --check`.
-- Frontend: `make test-front` (Vitest) e lint `biome check src/`.
-- E2E Playwright (`frontend/tests/e2e`, 5 testes): rodam contra a aplicacao real em `localhost:3000` (Docker Compose ativo, com PostgreSQL), incluindo o teste de persistencia (frontend -> API -> banco). Nao rodam no CI por exigirem a stack completa. Para outro endereco: `E2E_BASE_URL` e `E2E_API_URL`.
-- GitHub Actions: `Backend CI` e `Frontend CI` rodam lint e testes em push e em Pull Request para `main`.
+O frontend mostra a mensagem devolvida pela API em cada tela.
 
-## Video de Demonstracao
+## Assistente de IA (opcional)
+
+A chave do Gemini fica **somente no backend**, no arquivo `.env`; o navegador nunca a recebe.
+
+1. Crie uma chave gratuita em https://aistudio.google.com/apikey.
+2. Cole o valor em `GEMINI_API_KEY=` no arquivo `.env`.
+3. Rode `make up` para recriar o backend com a chave.
+
+Sem chave, os endpoints de IA respondem 503 com uma mensagem clara e todo o resto funciona.
+
+## Importacao de PDF (extra)
+
+Na pagina **Questoes**, o botao **Importar PDF** envia a prova ao backend, que extrai o texto e o gabarito com o `pdftotext`. A tela mostra as questoes encontradas e o usuario escolhe quais salvar. Questoes ja cadastradas (mesmo ano e numero) nao sao duplicadas. Provas diagramadas em duas colunas podem vir com o texto misturado; nesses casos a questao e marcada para revisao em vez de ser salva automaticamente.
+
+## Solucao de problemas
+
+- **"relation ... does not exist" na tela**: as migracoes nao foram aplicadas. Rode `make db-upgrade`.
+- **Porta em uso (3000, 5432 ou 8000)**: outro projeto Docker Compose esta usando as mesmas portas. Pare-o com `docker compose -p <nome-do-projeto> down` antes de `make up`.
+- **`make` nao encontrado no Windows**: use o Git Bash ou o WSL. No PowerShell, os comandos equivalentes estao na coluna "O que faz" da tabela do Makefile (por exemplo, `docker compose up -d --build`).
+- **Windows PowerShell 5.1**: o operador `&&` nao existe; rode um comando por linha.
+- **Mensagem "Nao foi possivel falar com o servidor"**: confira com `make ps` e `make logs` se o backend esta de pe.
+
+## Video de demonstracao
 
 [Link para o video de demonstracao](https://link-do-video-aqui)
 
