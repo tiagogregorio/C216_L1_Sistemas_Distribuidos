@@ -28,7 +28,9 @@ test.describe("Fluxo completo da plataforma ENADE", () => {
 		await expect(questoes.first()).toBeVisible();
 	});
 
-	test("cria simulado e responde questoes", async ({ page }) => {
+	test("cria simulado, responde e navega entre questoes ate finalizar", async ({
+		page,
+	}) => {
 		await page.goto("/");
 		await page.getByRole("button", { name: "Novo Simulado" }).click();
 
@@ -41,10 +43,43 @@ test.describe("Fluxo completo da plataforma ENADE", () => {
 		for (let i = 0; i < 5; i++) {
 			await page.locator("button:has-text('1')").first().click();
 			await page.getByRole("button", { name: "CONFIRMAR RESPOSTA" }).click();
-			await page.waitForTimeout(2500);
+			await expect(page.getByText(/RESPOSTA CERTA|ERROU/)).toBeVisible();
+			if (i < 4) {
+				await page.getByRole("button", { name: "Avancar ▶" }).click();
+			}
 		}
+
+		await page.getByRole("button", { name: "Finalizar" }).click();
 
 		await expect(page.getByText("Resultado")).toBeVisible();
 		await expect(page.getByText("Voltar ao Menu")).toBeVisible();
+	});
+
+	test("permite voltar para revisar uma questao ja respondida", async ({
+		page,
+	}) => {
+		await page.goto("/");
+		await page.getByRole("button", { name: "Novo Simulado" }).click();
+
+		await page.getByPlaceholder("Ex: Revisao ENADE 2019").fill("E2E Revisao");
+		await page.getByRole("spinbutton").fill("3");
+		await page.getByRole("button", { name: "Iniciar Simulado" }).click();
+		await page.waitForSelector("text=ENADE", { timeout: 5000 });
+
+		// Responde a primeira questao e avanca.
+		await page.locator("button:has-text('1')").first().click();
+		await page.getByRole("button", { name: "CONFIRMAR RESPOSTA" }).click();
+		await page.getByRole("button", { name: "Avancar ▶" }).click();
+
+		await expect(page.getByText("Pergunta 2 de 3")).toBeVisible();
+
+		// Volta e deve ver a primeira questao em modo revisao (sem o botao
+		// de confirmar, ja que a resposta foi preservada).
+		await page.getByRole("button", { name: "◀ Voltar" }).click();
+		await expect(page.getByText("Pergunta 1 de 3")).toBeVisible();
+		await expect(page.getByText("Revisao")).toBeVisible();
+		await expect(
+			page.getByRole("button", { name: "CONFIRMAR RESPOSTA" }),
+		).toHaveCount(0);
 	});
 });
