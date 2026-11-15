@@ -110,6 +110,110 @@ class TestImagemQuestao:
         assert criada["imagem"] is None
 
 
+class TestImportarPdf:
+    def test_rejeita_arquivo_que_nao_e_pdf(self, client):
+        response = client.post(
+            "/questoes/importar-pdf",
+            files={"arquivo": ("teste.txt", b"nao sou um pdf", "text/plain")},
+            data={"ano": "2019", "inicio_ce": "9"},
+        )
+        assert response.status_code == 422
+
+    def test_pdf_invalido_retorna_422_em_vez_de_quebrar(self, client):
+        response = client.post(
+            "/questoes/importar-pdf",
+            files={
+                "arquivo": (
+                    "teste.pdf",
+                    b"%PDF-1.4 nao e um pdf valido de verdade",
+                    "application/pdf",
+                )
+            },
+            data={"ano": "2019", "inicio_ce": "9"},
+        )
+        assert response.status_code == 422
+
+
+class TestStatusIA:
+    def test_sem_chave_informa_que_nao_esta_configurada(self, client, monkeypatch):
+        monkeypatch.setattr(
+            "app.services.assistente_ia.GEMINI_API_KEY", "", raising=False
+        )
+        data = client.get("/questoes/ia/status").json()
+        assert data["configurada"] is False
+        assert data["modelo"]
+        assert "teste" not in data
+
+    def test_com_chave_mas_sem_testar_nao_chama_o_gemini(self, client, monkeypatch):
+        monkeypatch.setattr(
+            "app.services.assistente_ia.GEMINI_API_KEY", "chave-falsa", raising=False
+        )
+        data = client.get("/questoes/ia/status").json()
+        assert data["configurada"] is True
+        assert "teste" not in data
+
+
+class TestClassificarLote:
+    CORPO = {
+        "questoes": [
+            {
+                "enunciado": "Qual estrutura de dados usa LIFO?",
+                "alternativa_a": "Fila",
+                "alternativa_b": "Pilha",
+                "alternativa_c": "Lista",
+                "alternativa_d": "Arvore",
+                "alternativa_e": "Grafo",
+            }
+        ]
+    }
+
+    def test_sem_chave_retorna_503_com_mensagem(self, client, monkeypatch):
+        monkeypatch.setattr(
+            "app.services.assistente_ia.GEMINI_API_KEY", "", raising=False
+        )
+        response = client.post("/questoes/classificar-lote", json=self.CORPO)
+        assert response.status_code == 503
+        assert "GEMINI_API_KEY" in response.json()["detail"]
+
+    def test_lista_vazia_retorna_422(self, client):
+        response = client.post("/questoes/classificar-lote", json={"questoes": []})
+        assert response.status_code == 422
+
+
+class TestPaginaOriginal:
+    def test_guarda_pagina_original_e_nao_vaza_na_listagem(self, client):
+        dados = {**QUESTAO_VALIDA, "pagina_original": "data:image/jpeg;base64,abc"}
+        criada = client.post("/questoes/", json=dados).json()
+        assert "pagina_original" not in criada  # resposta leve
+
+        buscada = client.get(f"/questoes/{criada['id']}").json()
+        assert buscada["pagina_original"] == "data:image/jpeg;base64,abc"
+
+        # A listagem e leve: nao carrega a imagem de cada questao.
+        item = client.get("/questoes/").json()[0]
+        assert "pagina_original" not in item
+
+    def test_anexa_pagina_a_questao_existente_sem_mexer_no_resto(self, client):
+        criada = client.post("/questoes/", json=QUESTAO_VALIDA).json()
+        response = client.patch(
+            f"/questoes/{criada['id']}",
+            json={"pagina_original": "data:image/jpeg;base64,xyz"},
+        )
+        assert response.status_code == 200
+        data = response.json()
+        assert "pagina_original" not in data  # resposta leve
+        buscada = client.get(f"/questoes/{criada['id']}").json()
+        assert buscada["pagina_original"] == "data:image/jpeg;base64,xyz"
+        assert buscada["enunciado"] == criada["enunciado"]
+        assert buscada["resposta"] == criada["resposta"]
+
+    def test_listagem_inclui_fonte(self, client):
+        dados = {**QUESTAO_VALIDA, "fonte": "Lista de Algoritmos"}
+        client.post("/questoes/", json=dados)
+        item = client.get("/questoes/").json()[0]
+        assert item["fonte"] == "Lista de Algoritmos"
+
+
 class TestAssistenteIA:
     def test_sem_chave_configurada_retorna_503(self, client):
         """No ambiente de testes nao ha GEMINI_API_KEY configurada, entao o
@@ -206,6 +310,17 @@ class TestReiniciarCobertura:
         )
         assert depois.status_code == 201
         assert depois.json()["questao_ids"] == [criada["id"]]
+
+
+class TestFonteQuestao:
+    def test_criar_com_fonte_customizada(self, client):
+        dados = {**QUESTAO_VALIDA, "fonte": "Lista de Algoritmos - Prof. Fulano"}
+        criada = client.post("/questoes/", json=dados).json()
+        assert criada["fonte"] == "Lista de Algoritmos - Prof. Fulano"
+
+    def test_questao_sem_fonte_retorna_null(self, client):
+        criada = client.post("/questoes/", json=QUESTAO_VALIDA).json()
+        assert criada["fonte"] is None
 
 
 class TestEstatisticasQuestao:

@@ -93,6 +93,44 @@ class TestModoSemRepetir:
         assert response.status_code == 422
 
 
+class TestModoManual:
+    def test_cria_simulado_com_questoes_escolhidas(self, client):
+        ids = criar_questoes(client, 5)
+        escolhidas = [ids[0], ids[2], ids[4]]
+
+        response = client.post(
+            "/simulados/",
+            json={
+                "nome": "Selecao Manual",
+                "modo": "manual",
+                "questao_ids": escolhidas,
+            },
+        )
+        assert response.status_code == 201
+        data = response.json()
+        assert data["questao_ids"] == escolhidas
+        assert data["simulado"]["total_questoes"] == 3
+
+    def test_erro_sem_selecionar_nenhuma_questao(self, client):
+        response = client.post(
+            "/simulados/",
+            json={"nome": "Vazio", "modo": "manual", "questao_ids": []},
+        )
+        assert response.status_code == 422
+
+    def test_erro_com_id_inexistente(self, client):
+        ids = criar_questoes(client, 2)
+        response = client.post(
+            "/simulados/",
+            json={
+                "nome": "Id invalido",
+                "modo": "manual",
+                "questao_ids": [*ids, 999999],
+            },
+        )
+        assert response.status_code == 422
+
+
 class TestQuestoesDoSimulado:
     def test_retoma_simulado_antes_de_submeter(self, client):
         """As questoes devem estar disponiveis mesmo sem nenhuma resposta
@@ -158,6 +196,31 @@ class TestSubmeterRespostas:
             json={"respostas": respostas},
         )
         assert response.status_code == 409
+
+
+class TestFinalizacaoParcial:
+    def test_finalizar_com_poucas_respostas_marca_respondidas(self, client):
+        criar_questoes(client, 10)
+        criado = client.post(
+            "/simulados/", json={"nome": "Parcial", "quantidade": 10}
+        ).json()
+        simulado_id = criado["simulado"]["id"]
+
+        # Responde so 3 das 10 questoes do simulado, todas corretas.
+        respostas = [
+            {"questao_id": qid, "alternativa_escolhida": "A"}
+            for qid in criado["questao_ids"][:3]
+        ]
+        response = client.post(
+            f"/simulados/{simulado_id}/submeter", json={"respostas": respostas}
+        )
+        assert response.status_code == 200
+        data = response.json()
+        assert data["respondidas"] == 3
+        assert data["acertos"] == 3
+        assert data["total_questoes"] == 10
+        # Nota segue o padrao ENADE: nao respondidas contam como erro.
+        assert data["nota"] == 30.0
 
 
 class TestDashboard:
