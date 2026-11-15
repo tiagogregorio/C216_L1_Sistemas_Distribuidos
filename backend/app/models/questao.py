@@ -25,3 +25,8 @@ class Questao(Base):
     assunto: Mapped[str | None] = mapped_column(String(100), nullable=True)
     dificuldade: Mapped[str | None] = mapped_column(String(10), nullable=True)
     imagem: Mapped[str | None] = mapped_column(Text, nullable=True)
+    fonte: Mapped[str | None] = mapped_column(String(150), nullable=True)
+    """Nome livre da prova/lista de origem (ex.: "Lista de Algoritmos -
+    Prof. Fulano"). Quando vazio, a interface mostra "ENADE {ano}"."""
+    pagina_original: Mapped[str | None] = mapped_column(Text, nullable=True)
+    """Pagina do PDF da prova (data URI JPEG) para conferir a questao original."""

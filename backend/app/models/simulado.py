@@ -20,6 +20,9 @@ class Simulado(Base):
     total_questoes: Mapped[int] = mapped_column(default=0)
     acertos: Mapped[int | None] = mapped_column(nullable=True)
     nota: Mapped[float | None] = mapped_column(nullable=True)
+    respondidas: Mapped[int | None] = mapped_column(nullable=True)
+    """Quantas questoes foram de fato respondidas ao finalizar (pode ser
+    menor que total_questoes, se o usuario finalizou antes de terminar)."""
     ciclo: Mapped[int] = mapped_column(default=1, server_default="1")
     """Ciclo de cobertura em que este simulado foi criado (ver CicloCobertura)."""
 

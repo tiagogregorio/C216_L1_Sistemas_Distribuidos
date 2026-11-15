@@ -100,6 +100,8 @@ class QuestaoService:
             "alternativa_e",
             "assunto",
             "imagem",
+            "fonte",
+            "pagina_original",
         ):
             if campo in enviados:
                 alteracoes[campo] = enviados[campo]

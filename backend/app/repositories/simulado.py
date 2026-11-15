@@ -78,6 +78,9 @@ class SimuladoRepository:
         acertos = sum(1 for r in respostas if r["correta"])
         simulado.finalizado = True
         simulado.acertos = acertos
+        simulado.respondidas = len(respostas)
+        # Nota no padrao ENADE: questoes nao respondidas contam como erro,
+        # entao o denominador e sempre o total de questoes do simulado.
         simulado.nota = round((acertos / simulado.total_questoes) * 100, 2)
 
         self.db.commit()
@@ -192,6 +195,7 @@ class SimuladoRepository:
                 "ano": questao.ano,
                 "numero": questao.numero,
                 "assunto": questao.assunto,
+                "fonte": questao.fonte,
                 "enunciado": questao.enunciado,
                 "alternativa_escolhida": resposta.alternativa_escolhida,
                 "resposta_correta": questao.resposta,

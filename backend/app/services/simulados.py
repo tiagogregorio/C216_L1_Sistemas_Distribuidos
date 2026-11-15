@@ -30,38 +30,53 @@ class SimuladoService:
         self.questao_repo = questao_repo
 
     def criar(self, dados: SimuladoCreate) -> tuple[Simulado, list[int]]:
-        """Cria um simulado e seleciona questoes aleatorias.
+        """Cria um simulado.
 
-        No modo "sem_repetir", exclui questoes ja respondidas em qualquer
+        Modo "manual": usa exatamente as questoes passadas em
+        dados.questao_ids, na ordem escolhida pelo usuario.
+        Modo "sem_repetir": exclui questoes ja respondidas em qualquer
         simulado anterior, para cobrir o banco inteiro sem repeticao.
+        Modo "aleatorio": sorteia livremente, podendo repetir.
         """
         ciclo_atual = self.questao_repo.obter_ciclo_atual()
 
-        excluir_ids = None
-        if dados.modo == "sem_repetir":
-            excluir_ids = self.questao_repo.ids_respondidas_no_ciclo(ciclo_atual)
-
-        questoes = self.questao_repo.listar_aleatorio(
-            quantidade=dados.quantidade,
-            ano=dados.ano,
-            tipo=dados.tipo,
-            dificuldade=dados.dificuldade,
-            excluir_ids=excluir_ids,
-        )
-
-        if len(questoes) < dados.quantidade:
-            disponivel = len(questoes)
-            if dados.modo == "sem_repetir":
-                motivo = (
-                    "ja foram todas respondidas no modo sem repetir "
-                    "(reinicie a cobertura ou use o modo aleatorio)"
+        if dados.modo == "manual":
+            ids_pedidos = dados.questao_ids or []
+            if not ids_pedidos:
+                raise QuestoesInsuficientesError(
+                    "Selecione pelo menos uma questao para o modo manual."
                 )
-            else:
-                motivo = "disponiveis com os filtros informados"
-            raise QuestoesInsuficientesError(
-                f"Solicitadas {dados.quantidade} questoes, "
-                f"mas apenas {disponivel} {motivo}."
+            questoes = self.questao_repo.buscar_varias_por_id(ids_pedidos)
+            if len(questoes) < len(ids_pedidos):
+                raise QuestoesInsuficientesError(
+                    "Uma ou mais questoes selecionadas nao foram encontradas."
+                )
+        else:
+            excluir_ids = None
+            if dados.modo == "sem_repetir":
+                excluir_ids = self.questao_repo.ids_respondidas_no_ciclo(ciclo_atual)
+
+            questoes = self.questao_repo.listar_aleatorio(
+                quantidade=dados.quantidade,
+                ano=dados.ano,
+                tipo=dados.tipo,
+                dificuldade=dados.dificuldade,
+                excluir_ids=excluir_ids,
             )
+
+            if len(questoes) < dados.quantidade:
+                disponivel = len(questoes)
+                if dados.modo == "sem_repetir":
+                    motivo = (
+                        "ja foram todas respondidas no modo sem repetir "
+                        "(reinicie a cobertura ou use o modo aleatorio)"
+                    )
+                else:
+                    motivo = "disponiveis com os filtros informados"
+                raise QuestoesInsuficientesError(
+                    f"Solicitadas {dados.quantidade} questoes, "
+                    f"mas apenas {disponivel} {motivo}."
+                )
 
         questao_ids = [q.id for q in questoes]
         simulado = self.simulado_repo.criar(

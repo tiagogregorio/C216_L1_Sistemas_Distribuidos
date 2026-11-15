@@ -43,6 +43,16 @@ class QuestaoRepository:
             consulta = consulta.where(Questao.dificuldade == dificuldade)
         return list(self.db.scalars(consulta))
 
+    def buscar_varias_por_id(self, ids: list[int]) -> list[Questao]:
+        """Busca questoes por uma lista de ids, preservando a ordem pedida
+        (usado no modo 'manual' de criacao de simulado)."""
+        if not ids:
+            return []
+        encontradas = {
+            q.id: q for q in self.db.scalars(select(Questao).where(Questao.id.in_(ids)))
+        }
+        return [encontradas[i] for i in ids if i in encontradas]
+
     def listar_aleatorio(
         self,
         quantidade: int,

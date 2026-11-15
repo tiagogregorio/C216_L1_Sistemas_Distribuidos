@@ -22,6 +22,10 @@ class QuestaoBase(BaseModel):
     dificuldade: str | None = Field(default=None, pattern=r"^(facil|medio|dificil)$")
     imagem: str | None = Field(default=None)
     """Imagem (codigo, diagrama, tabela) da questao como data URI base64."""
+    fonte: str | None = Field(default=None, max_length=150)
+    """Nome livre da prova/lista de origem (ex.: "Lista de Algoritmos")."""
+    pagina_original: str | None = Field(default=None)
+    """Pagina do PDF da prova (data URI JPEG) para conferir a questao."""
 
 
 class QuestaoCreate(QuestaoBase):
@@ -44,6 +48,8 @@ class QuestaoUpdate(BaseModel):
     assunto: str | None = Field(default=None, max_length=100)
     dificuldade: str | None = Field(default=None, pattern=r"^(facil|medio|dificil)$")
     imagem: str | None = Field(default=None)
+    fonte: str | None = Field(default=None, max_length=150)
+    pagina_original: str | None = Field(default=None)
 
 
 class QuestaoResponse(QuestaoBase):
@@ -65,6 +71,7 @@ class QuestaoResumo(BaseModel):
     tipo: str
     assunto: str | None
     dificuldade: str | None
+    fonte: str | None = None
 
 
 class EstatisticasQuestao(BaseModel):
@@ -75,3 +82,20 @@ class EstatisticasQuestao(BaseModel):
     por_alternativa: dict[str, int]
     mais_escolhida: str | None
     taxa_acerto: float | None
+
+
+class ItemClassificacao(BaseModel):
+    """Dados de uma questao enviados para classificacao automatica."""
+
+    enunciado: str = ""
+    alternativa_a: str = ""
+    alternativa_b: str = ""
+    alternativa_c: str = ""
+    alternativa_d: str = ""
+    alternativa_e: str = ""
+
+
+class ClassificacaoLote(BaseModel):
+    """Lote de questoes a classificar (assunto e dificuldade) via IA."""
+
+    questoes: list[ItemClassificacao] = Field(min_length=1, max_length=20)
