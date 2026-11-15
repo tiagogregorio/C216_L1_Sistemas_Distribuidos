@@ -51,6 +51,21 @@ db-history: ## Mostra historico de migracoes
 seed: ## Popula o banco com questoes do ENADE
 	$(COMPOSE) exec backend python -m app.seed
 
+seed-2023: ## Adiciona questoes do ENADE 2023 (nao duplica se ja existirem)
+	$(COMPOSE) exec backend python -m app.seed_2023
+
+fix-q10-2023: ## Corrige a imagem que faltou na Questao 10 do ENADE 2023
+	$(COMPOSE) exec backend python -m app.fix_q10_2023
+
+limpar-lixo: ## Remove rodape/codigo de barras do INEP do texto de questoes ja salvas
+	$(COMPOSE) exec backend python -m app.tools.limpar_lixo_pdf
+
+duplicadas: ## Lista questoes duplicadas (mesmo ano e numero)
+	$(COMPOSE) exec backend python -m app.tools.duplicadas
+
+remover-duplicadas: ## Remove duplicadas sem simulado (mantem a mais antiga)
+	$(COMPOSE) exec backend python -m app.tools.duplicadas --remover
+
 # === Qualidade ===
 test: test-back test-front ## Roda todos os testes
 
