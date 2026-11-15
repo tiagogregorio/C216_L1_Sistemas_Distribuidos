@@ -73,6 +73,9 @@ describe("QuestoesPage - editar", () => {
 		expect(corpo).not.toHaveProperty("id");
 		expect(corpo).not.toHaveProperty("pagina_original");
 		await waitFor(() => expect(api.listarQuestoes).toHaveBeenCalledTimes(2));
+		expect(
+			await screen.findByText("Questao atualizada com sucesso."),
+		).toBeInTheDocument();
 	});
 
 	it("Cancelar fecha o formulario sem salvar", async () => {

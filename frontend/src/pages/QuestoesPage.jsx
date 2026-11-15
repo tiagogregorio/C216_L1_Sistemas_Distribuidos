@@ -16,6 +16,7 @@ export default function QuestoesPage() {
 	const [mostrarForm, setMostrarForm] = useState(false);
 	const [mostrarImportar, setMostrarImportar] = useState(false);
 	const [editando, setEditando] = useState(null);
+	const [sucesso, setSucesso] = useState(null);
 	const [filtroAno, setFiltroAno] = useState("");
 	const [filtroTipo, setFiltroTipo] = useState("");
 
@@ -40,13 +41,16 @@ export default function QuestoesPage() {
 	}, [carregar]);
 
 	async function handleCriar(dados) {
+		setSucesso(null);
 		await criarQuestao(dados);
 		setMostrarForm(false);
+		setSucesso("Questao cadastrada com sucesso.");
 		carregar();
 	}
 
 	async function handleEditar(id) {
 		setErro(null);
+		setSucesso(null);
 		try {
 			// A listagem e resumida; busca a questao completa para preencher o form.
 			const completa = await buscarQuestao(id);
@@ -63,13 +67,16 @@ export default function QuestoesPage() {
 		const { id: _id, pagina_original: _pagina, ...editaveis } = dados;
 		await atualizarQuestao(editando.id, editaveis);
 		setEditando(null);
+		setSucesso("Questao atualizada com sucesso.");
 		carregar();
 	}
 
 	async function handleRemover(id) {
 		if (!confirm("Remover esta questao?")) return;
+		setSucesso(null);
 		try {
 			await removerQuestao(id);
+			setSucesso("Questao removida com sucesso.");
 			carregar();
 		} catch (err) {
 			setErro(err.message);
@@ -169,6 +176,15 @@ export default function QuestoesPage() {
 					<option value="FG">Formacao Geral</option>
 				</select>
 			</div>
+
+			{sucesso && (
+				<div
+					role="status"
+					className="bg-green-900/30 border border-green-500 text-green-300 px-4 py-3 rounded-lg mb-4"
+				>
+					{sucesso}
+				</div>
+			)}
 
 			{erro && (
 				<div

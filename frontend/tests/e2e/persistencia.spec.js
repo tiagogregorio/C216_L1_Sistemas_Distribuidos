@@ -33,6 +33,10 @@ test.describe("Persistencia real: frontend -> API -> PostgreSQL", () => {
 		}
 		await form.getByRole("button", { name: "Cadastrar Questao" }).click();
 
+		await expect(
+			page.getByText("Questao cadastrada com sucesso."),
+		).toBeVisible();
+
 		// 2. A questao aparece na lista.
 		await expect(page.getByText(marca)).toBeVisible();
 
