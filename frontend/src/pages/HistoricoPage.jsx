@@ -107,6 +107,15 @@ export default function HistoricoPage({ onContinuar }) {
 										<div className="text-xs text-gray-400">
 											{s.acertos}/{s.total_questoes} acertos
 										</div>
+										{s.respondidas != null &&
+											s.respondidas < s.total_questoes && (
+												<div
+													className="text-xs text-amber-400 mt-0.5"
+													title="Finalizado antes de responder todas as questoes"
+												>
+													respondeu {s.respondidas}/{s.total_questoes}
+												</div>
+											)}
 									</div>
 								) : (
 									<div className="flex items-center gap-3">

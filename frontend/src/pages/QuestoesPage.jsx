@@ -1,12 +1,14 @@
 import { useCallback, useEffect, useState } from "react";
 import QuestaoForm from "../components/QuestaoForm";
 import { criarQuestao, listarQuestoes, removerQuestao } from "../services/api";
+import ImportarPdfPage from "./ImportarPdfPage";
 
 export default function QuestoesPage() {
 	const [questoes, setQuestoes] = useState([]);
 	const [loading, setLoading] = useState(true);
 	const [erro, setErro] = useState(null);
 	const [mostrarForm, setMostrarForm] = useState(false);
+	const [mostrarImportar, setMostrarImportar] = useState(false);
 	const [filtroAno, setFiltroAno] = useState("");
 	const [filtroTipo, setFiltroTipo] = useState("");
 
@@ -55,14 +57,38 @@ export default function QuestoesPage() {
 				<h1 className="text-2xl font-bold text-[var(--cor-destaque)]">
 					Banco de Questoes
 				</h1>
-				<button
-					type="button"
-					onClick={() => setMostrarForm(!mostrarForm)}
-					className="bg-[var(--cor-destaque)] text-[var(--cor-fundo)] font-bold px-6 py-2 rounded-lg hover:brightness-110 transition cursor-pointer"
-				>
-					{mostrarForm ? "Fechar" : "+ Nova Questao"}
-				</button>
+				<div className="flex gap-3">
+					<button
+						type="button"
+						onClick={() => {
+							setMostrarImportar(!mostrarImportar);
+							setMostrarForm(false);
+						}}
+						className="bg-[var(--cor-painel)] border-2 border-[var(--cor-destaque)] text-[var(--cor-destaque)] font-bold px-6 py-2 rounded-lg hover:bg-[var(--cor-destaque)]/10 transition cursor-pointer"
+					>
+						{mostrarImportar ? "Fechar" : "Importar PDF"}
+					</button>
+					<button
+						type="button"
+						onClick={() => {
+							setMostrarForm(!mostrarForm);
+							setMostrarImportar(false);
+						}}
+						className="bg-[var(--cor-destaque)] text-[var(--cor-fundo)] font-bold px-6 py-2 rounded-lg hover:brightness-110 transition cursor-pointer"
+					>
+						{mostrarForm ? "Fechar" : "+ Nova Questao"}
+					</button>
+				</div>
 			</div>
+
+			{mostrarImportar && (
+				<ImportarPdfPage
+					onFechar={() => {
+						setMostrarImportar(false);
+						carregar();
+					}}
+				/>
+			)}
 
 			{mostrarForm && (
 				<div className="bg-[var(--cor-painel)] border border-[var(--cor-borda)] rounded-xl p-6 mb-6">

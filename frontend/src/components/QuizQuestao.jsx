@@ -2,24 +2,37 @@ import { useEffect, useState } from "react";
 import { useSound } from "../sound/SoundContext";
 import AjudasQuiz from "./AjudasQuiz";
 
-export default function QuizQuestao({ questao, numero, total, onResponder }) {
-	const [selecionada, setSelecionada] = useState(null);
-	const [confirmada, setConfirmada] = useState(false);
-	const [tempo, setTempo] = useState(0);
+export default function QuizQuestao({
+	questao,
+	numero,
+	total,
+	respostaSalva,
+	respondidas,
+	onResponder,
+}) {
+	const [selecionada, setSelecionada] = useState(
+		respostaSalva?.alternativa_escolhida ?? null,
+	);
+	const [confirmada, setConfirmada] = useState(Boolean(respostaSalva));
+	const [tempo, setTempo] = useState(respostaSalva?.tempo_resposta ?? 0);
 	const [eliminadas, setEliminadas] = useState([]);
 	const [cartasUsada, setCartasUsada] = useState(false);
 	const [universitariosUsada, setUniversitariosUsada] = useState(false);
 	const [iaUsada, setIaUsada] = useState(false);
+	const [mostrarPdf, setMostrarPdf] = useState(false);
 	const { playSelect, playCorrect, playWrong } = useSound();
 
+	// Troca de questao (inclusive ao navegar com Voltar/Avancar): se ja houver
+	// resposta salva para ela, mostra em modo revisao; senao, comeca em branco.
 	useEffect(() => {
-		setSelecionada(null);
-		setConfirmada(false);
-		setTempo(0);
+		setSelecionada(respostaSalva?.alternativa_escolhida ?? null);
+		setConfirmada(Boolean(respostaSalva));
+		setTempo(respostaSalva?.tempo_resposta ?? 0);
 		setEliminadas([]);
 		setCartasUsada(false);
 		setUniversitariosUsada(false);
 		setIaUsada(false);
+		setMostrarPdf(false);
 	}, [questao.id]);
 
 	useEffect(() => {
@@ -27,6 +40,16 @@ export default function QuizQuestao({ questao, numero, total, onResponder }) {
 		const timer = setInterval(() => setTempo((t) => t + 1), 1000);
 		return () => clearInterval(timer);
 	}, [confirmada, questao.id]);
+
+	// Esc fecha a pagina original do PDF.
+	useEffect(() => {
+		if (!mostrarPdf) return;
+		function aoTeclar(e) {
+			if (e.key === "Escape") setMostrarPdf(false);
+		}
+		document.addEventListener("keydown", aoTeclar);
+		return () => document.removeEventListener("keydown", aoTeclar);
+	}, [mostrarPdf]);
 
 	function selecionar(letra) {
 		if (confirmada || eliminadas.includes(letra)) return;
@@ -58,14 +81,12 @@ export default function QuizQuestao({ questao, numero, total, onResponder }) {
 		} else {
 			playWrong();
 		}
-		setTimeout(() => {
-			onResponder({
-				questao_id: questao.id,
-				alternativa_escolhida: selecionada,
-				tempo_resposta: tempo,
-				correta,
-			});
-		}, 2000);
+		onResponder({
+			questao_id: questao.id,
+			alternativa_escolhida: selecionada,
+			tempo_resposta: tempo,
+			correta,
+		});
 	}
 
 	function formatarTempo(s) {
@@ -103,6 +124,29 @@ export default function QuizQuestao({ questao, numero, total, onResponder }) {
 
 	return (
 		<div className="max-w-4xl mx-auto px-4">
+			{mostrarPdf && questao.pagina_original && (
+				<dialog
+					open
+					aria-label="Pagina original da prova em PDF"
+					className="fixed inset-0 z-50 m-0 h-full w-full max-w-none overflow-auto bg-black/85 p-4 text-inherit"
+				>
+					<div className="max-w-3xl mx-auto">
+						<button
+							type="button"
+							onClick={() => setMostrarPdf(false)}
+							className="sticky top-2 ml-auto block mb-3 bg-[var(--cor-destaque)] text-[var(--cor-fundo)] font-bold px-4 py-1.5 rounded-lg cursor-pointer"
+						>
+							Fechar (Esc)
+						</button>
+						<img
+							src={questao.pagina_original}
+							alt="Pagina original da prova em PDF"
+							className="w-full rounded-lg bg-white"
+						/>
+					</div>
+				</dialog>
+			)}
+
 			{/* Header com progresso e timer */}
 			<div className="flex items-center justify-between mb-4">
 				<div className="flex items-center gap-3">
@@ -130,16 +174,17 @@ export default function QuizQuestao({ questao, numero, total, onResponder }) {
 				</div>
 			</div>
 
-			{/* Barra de progresso estilo Show do Milhão */}
+			{/* Barra de progresso: verde = respondida, amarelo = atual, cinza = pendente */}
 			<div className="flex items-center gap-2 mb-6">
 				{Array.from({ length: total }, (_, i) => (
 					<div
 						key={`passo-${i}-de-${total}`}
+						title={`Pergunta ${i + 1}${respondidas?.[i] ? " (respondida)" : ""}`}
 						className={`h-2 flex-1 rounded-full transition-all duration-300 ${
-							i < numero
-								? "bg-gradient-to-r from-green-400 to-cyan-400"
-								: i === numero - 1
-									? "bg-yellow-400"
+							i === numero - 1
+								? "bg-yellow-400"
+								: respondidas?.[i]
+									? "bg-gradient-to-r from-green-400 to-cyan-400"
 									: "bg-gray-700"
 						}`}
 					/>
@@ -151,11 +196,41 @@ export default function QuizQuestao({ questao, numero, total, onResponder }) {
 				<div className="bg-gradient-to-r from-cyan-900/80 via-teal-800/80 to-cyan-900/80 border-2 border-cyan-400/40 rounded-2xl p-6 shadow-xl shadow-cyan-500/10">
 					<div className="flex items-center gap-3 mb-3">
 						<span className="bg-gradient-to-r from-yellow-400 to-amber-500 text-gray-900 font-black text-sm px-4 py-1 rounded-full">
-							ENADE {questao.ano}
+							{questao.fonte || `ENADE ${questao.ano}`}
 						</span>
 						<span className="text-cyan-300/70 text-sm font-medium">
 							Questao {questao.numero} | Pergunta {numero} de {total}
 						</span>
+						{confirmada && (
+							<span className="text-xs bg-black/30 text-cyan-200 px-2 py-0.5 rounded-full">
+								Revisao
+							</span>
+						)}
+						<button
+							type="button"
+							onClick={() => setMostrarPdf(true)}
+							disabled={!questao.pagina_original}
+							title={
+								questao.pagina_original
+									? "Abre a pagina original da prova em PDF"
+									: "Esta questao nao tem a pagina do PDF anexada. Reimporte o PDF em Questoes > Importar PDF para anexar."
+							}
+							className="ml-auto flex items-center gap-2 text-xs font-bold px-3 py-1.5 rounded-lg border border-cyan-300/40 text-cyan-100 bg-black/20 hover:bg-black/40 transition-colors cursor-pointer disabled:opacity-40 disabled:cursor-not-allowed"
+						>
+							<svg
+								viewBox="0 0 24 24"
+								className="w-4 h-4"
+								fill="none"
+								stroke="currentColor"
+								strokeWidth="1.8"
+								aria-hidden="true"
+							>
+								<path d="M7 3h7l5 5v13H7z" />
+								<path d="M14 3v5h5" />
+								<path d="M10 13h6M10 17h6" />
+							</svg>
+							Ver pagina do PDF
+						</button>
 					</div>
 					<p className="text-white text-lg leading-relaxed whitespace-pre-line font-medium">
 						{questao.enunciado}

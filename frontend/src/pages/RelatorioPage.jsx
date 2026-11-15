@@ -114,7 +114,7 @@ export default function RelatorioPage() {
 							>
 								<div className="flex items-center gap-2 mb-2 text-xs text-gray-400">
 									<span className="bg-black/30 px-2 py-0.5 rounded">
-										ENADE {q.ano}
+										{q.fonte || `ENADE ${q.ano}`}
 									</span>
 									<span>Questao {q.numero}</span>
 									{q.assunto && <span>· {q.assunto}</span>}

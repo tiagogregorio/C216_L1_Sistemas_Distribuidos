@@ -1,10 +1,110 @@
 import { useEffect, useState } from "react";
 import {
+	anosDisponiveis,
 	coberturaQuestoes,
 	criarSimulado,
+	listarQuestoes,
 	reiniciarCobertura,
 } from "../services/api";
 import { validarSimulado } from "../validation";
+
+function SeletorDeQuestoes({ selecionadas, onAlternar, anos }) {
+	const [questoes, setQuestoes] = useState([]);
+	const [loading, setLoading] = useState(true);
+	const [erro, setErro] = useState(null);
+	const [filtroAno, setFiltroAno] = useState("");
+	const [filtroTipo, setFiltroTipo] = useState("");
+
+	useEffect(() => {
+		setLoading(true);
+		setErro(null);
+		const filtros = {};
+		if (filtroAno) filtros.ano = filtroAno;
+		if (filtroTipo) filtros.tipo = filtroTipo;
+		listarQuestoes(filtros)
+			.then(setQuestoes)
+			.catch((err) => setErro(err.message))
+			.finally(() => setLoading(false));
+	}, [filtroAno, filtroTipo]);
+
+	const selectClass =
+		"bg-[var(--cor-fundo)] border border-[var(--cor-borda)] rounded-lg px-3 py-2 text-sm";
+
+	return (
+		<div>
+			<div className="flex gap-3 mb-3">
+				<select
+					value={filtroAno}
+					onChange={(e) => setFiltroAno(e.target.value)}
+					className={selectClass}
+				>
+					<option value="">Todos os anos</option>
+					{anos.map((a) => (
+						<option key={a} value={a}>
+							{a}
+						</option>
+					))}
+				</select>
+				<select
+					value={filtroTipo}
+					onChange={(e) => setFiltroTipo(e.target.value)}
+					className={selectClass}
+				>
+					<option value="">Todos os tipos</option>
+					<option value="CE">Comp. Especifico</option>
+					<option value="FG">Form. Geral</option>
+				</select>
+				<span className="text-sm text-gray-400 self-center">
+					{selecionadas.length} selecionada(s)
+				</span>
+			</div>
+
+			{erro && <p className="text-red-400 text-sm mb-2">{erro}</p>}
+
+			{loading ? (
+				<p className="text-gray-400 text-sm py-6 text-center">
+					Carregando questoes...
+				</p>
+			) : questoes.length === 0 ? (
+				<p className="text-gray-400 text-sm py-6 text-center">
+					Nenhuma questao encontrada com esses filtros.
+				</p>
+			) : (
+				<div className="max-h-80 overflow-y-auto space-y-2 border border-[var(--cor-borda)] rounded-lg p-2">
+					{questoes.map((q) => {
+						const marcada = selecionadas.includes(q.id);
+						return (
+							<label
+								key={q.id}
+								className={`flex items-center gap-3 px-3 py-2 rounded-lg cursor-pointer text-sm ${
+									marcada
+										? "bg-[var(--cor-destaque)]/10 border border-[var(--cor-destaque)]/40"
+										: "hover:bg-black/20 border border-transparent"
+								}`}
+							>
+								<input
+									type="checkbox"
+									checked={marcada}
+									onChange={() => onAlternar(q.id)}
+									className="accent-[var(--cor-destaque)]"
+								/>
+								<span className="font-mono text-xs bg-black/30 px-2 py-0.5 rounded">
+									{q.fonte || `ENADE ${q.ano}`}
+								</span>
+								<span className="text-gray-400 text-xs">Q{q.numero}</span>
+								{q.assunto && (
+									<span className="text-gray-400 text-xs truncate">
+										{q.assunto}
+									</span>
+								)}
+							</label>
+						);
+					})}
+				</div>
+			)}
+		</div>
+	);
+}
 
 export default function NovoSimuladoPage({ onIniciar }) {
 	const [dados, setDados] = useState({
@@ -19,6 +119,14 @@ export default function NovoSimuladoPage({ onIniciar }) {
 	const [enviando, setEnviando] = useState(false);
 	const [cobertura, setCobertura] = useState(null);
 	const [reiniciando, setReiniciando] = useState(false);
+	const [anos, setAnos] = useState([]);
+	const [selecionadas, setSelecionadas] = useState([]);
+
+	useEffect(() => {
+		anosDisponiveis()
+			.then(setAnos)
+			.catch(() => setAnos([]));
+	}, []);
 
 	useEffect(() => {
 		if (dados.modo !== "sem_repetir") return;
@@ -52,8 +160,41 @@ export default function NovoSimuladoPage({ onIniciar }) {
 		setDados((prev) => ({ ...prev, [campo]: valor }));
 	}
 
+	function alternarSelecao(id) {
+		setSelecionadas((prev) =>
+			prev.includes(id) ? prev.filter((i) => i !== id) : [...prev, id],
+		);
+	}
+
 	async function handleSubmit(e) {
 		e.preventDefault();
+
+		if (dados.modo === "manual") {
+			if (!dados.nome || dados.nome.trim().length < 3) {
+				setErros({ nome: "Informe um nome com pelo menos 3 caracteres." });
+				return;
+			}
+			if (selecionadas.length === 0) {
+				setErros({ geral: "Selecione pelo menos uma questao." });
+				return;
+			}
+			setEnviando(true);
+			setErros({});
+			try {
+				const resultado = await criarSimulado({
+					nome: dados.nome,
+					modo: "manual",
+					questao_ids: selecionadas,
+				});
+				onIniciar(resultado.simulado.id, resultado.questao_ids);
+			} catch (err) {
+				setErros({ geral: err.message });
+			} finally {
+				setEnviando(false);
+			}
+			return;
+		}
+
 		const validacao = validarSimulado(dados);
 		if (Object.keys(validacao).length > 0) {
 			setErros(validacao);
@@ -124,26 +265,9 @@ export default function NovoSimuladoPage({ onIniciar }) {
 
 				<div>
 					<label className="block text-sm mb-2 text-gray-300">
-						Quantidade de questoes
-					</label>
-					<input
-						type="number"
-						value={dados.quantidade}
-						onChange={(e) => handleChange("quantidade", e.target.value)}
-						className={inputClass}
-						min="1"
-						max="50"
-					/>
-					{erros.quantidade && (
-						<p className="text-red-400 text-sm mt-1">{erros.quantidade}</p>
-					)}
-				</div>
-
-				<div>
-					<label className="block text-sm mb-2 text-gray-300">
 						Modo do simulado
 					</label>
-					<div className="grid grid-cols-2 gap-3">
+					<div className="grid grid-cols-3 gap-3">
 						<button
 							type="button"
 							onClick={() => handleChange("modo", "aleatorio")}
@@ -170,6 +294,20 @@ export default function NovoSimuladoPage({ onIniciar }) {
 							<div className="font-bold text-sm">Sem repetir</div>
 							<div className="text-xs text-gray-400 mt-0.5">
 								Cobre o banco inteiro sem repetir questao
+							</div>
+						</button>
+						<button
+							type="button"
+							onClick={() => handleChange("modo", "manual")}
+							className={`text-left px-4 py-3 rounded-lg border-2 transition-colors cursor-pointer ${
+								dados.modo === "manual"
+									? "border-[var(--cor-destaque)] bg-[var(--cor-destaque)]/10"
+									: "border-[var(--cor-borda)] hover:border-gray-500"
+							}`}
+						>
+							<div className="font-bold text-sm">Escolher questoes</div>
+							<div className="text-xs text-gray-400 mt-0.5">
+								Voce seleciona exatamente quais entram
 							</div>
 						</button>
 					</div>
@@ -212,53 +350,86 @@ export default function NovoSimuladoPage({ onIniciar }) {
 					)}
 				</div>
 
-				<div className="grid grid-cols-3 gap-4">
+				{dados.modo === "manual" ? (
 					<div>
 						<label className="block text-sm mb-2 text-gray-300">
-							Ano (opcional)
+							Escolha as questoes
 						</label>
-						<select
-							value={dados.ano}
-							onChange={(e) => handleChange("ano", e.target.value)}
-							className={inputClass}
-						>
-							<option value="">Todos</option>
-							<option value="2014">2014</option>
-							<option value="2017">2017</option>
-							<option value="2019">2019</option>
-							<option value="2023">2023</option>
-						</select>
+						<SeletorDeQuestoes
+							selecionadas={selecionadas}
+							onAlternar={alternarSelecao}
+							anos={anos}
+						/>
 					</div>
-					<div>
-						<label className="block text-sm mb-2 text-gray-300">
-							Tipo (opcional)
-						</label>
-						<select
-							value={dados.tipo}
-							onChange={(e) => handleChange("tipo", e.target.value)}
-							className={inputClass}
-						>
-							<option value="">Todos</option>
-							<option value="CE">Comp. Especifico</option>
-							<option value="FG">Form. Geral</option>
-						</select>
-					</div>
-					<div>
-						<label className="block text-sm mb-2 text-gray-300">
-							Dificuldade
-						</label>
-						<select
-							value={dados.dificuldade}
-							onChange={(e) => handleChange("dificuldade", e.target.value)}
-							className={inputClass}
-						>
-							<option value="">Todas</option>
-							<option value="facil">Facil</option>
-							<option value="medio">Medio</option>
-							<option value="dificil">Dificil</option>
-						</select>
-					</div>
-				</div>
+				) : (
+					<>
+						<div>
+							<label className="block text-sm mb-2 text-gray-300">
+								Quantidade de questoes
+							</label>
+							<input
+								type="number"
+								value={dados.quantidade}
+								onChange={(e) => handleChange("quantidade", e.target.value)}
+								className={inputClass}
+								min="1"
+								max="50"
+							/>
+							{erros.quantidade && (
+								<p className="text-red-400 text-sm mt-1">{erros.quantidade}</p>
+							)}
+						</div>
+
+						<div className="grid grid-cols-3 gap-4">
+							<div>
+								<label className="block text-sm mb-2 text-gray-300">
+									Ano (opcional)
+								</label>
+								<select
+									value={dados.ano}
+									onChange={(e) => handleChange("ano", e.target.value)}
+									className={inputClass}
+								>
+									<option value="">Todos</option>
+									{anos.map((a) => (
+										<option key={a} value={a}>
+											{a}
+										</option>
+									))}
+								</select>
+							</div>
+							<div>
+								<label className="block text-sm mb-2 text-gray-300">
+									Tipo (opcional)
+								</label>
+								<select
+									value={dados.tipo}
+									onChange={(e) => handleChange("tipo", e.target.value)}
+									className={inputClass}
+								>
+									<option value="">Todos</option>
+									<option value="CE">Comp. Especifico</option>
+									<option value="FG">Form. Geral</option>
+								</select>
+							</div>
+							<div>
+								<label className="block text-sm mb-2 text-gray-300">
+									Dificuldade
+								</label>
+								<select
+									value={dados.dificuldade}
+									onChange={(e) => handleChange("dificuldade", e.target.value)}
+									className={inputClass}
+								>
+									<option value="">Todas</option>
+									<option value="facil">Facil</option>
+									<option value="medio">Medio</option>
+									<option value="dificil">Dificil</option>
+								</select>
+							</div>
+						</div>
+					</>
+				)}
 
 				<button
 					type="submit"

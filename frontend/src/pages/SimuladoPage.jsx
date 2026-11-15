@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import QuizQuestao from "../components/QuizQuestao";
 import { buscarQuestao, submeterRespostas } from "../services/api";
 import { useSound } from "../sound/SoundContext";
@@ -19,11 +19,16 @@ export default function SimuladoPage({
 	const [indiceAtual, setIndiceAtual] = useState(
 		progressoSalvo?.indiceAtual ?? 0,
 	);
-	const [respostas, setRespostas] = useState(progressoSalvo?.respostas ?? []);
+	// Respostas guardadas por questao_id, para permitir navegar livremente
+	// (Voltar/Avancar) e revisar questoes ja respondidas sem perder o resto.
+	const [respostasPorQuestao, setRespostasPorQuestao] = useState(
+		progressoSalvo?.respostasPorQuestao ?? {},
+	);
 	const [resultado, setResultado] = useState(null);
 	const [loading, setLoading] = useState(true);
 	const [erro, setErro] = useState(null);
 	const { setMusicaAtiva } = useSound();
+	const timeoutAvancoRef = useRef(null);
 
 	// Musica de fundo toca enquanto o usuario esta no simulado (ajuda na
 	// concentracao) e para automaticamente ao sair desta pagina.
@@ -31,6 +36,12 @@ export default function SimuladoPage({
 		setMusicaAtiva(true);
 		return () => setMusicaAtiva(false);
 	}, [setMusicaAtiva]);
+
+	// Cancela o avanco automatico pendente se a pagina for desmontada antes
+	// dele disparar (ex.: usuario clicou Finalizar ou Parar logo em seguida).
+	useEffect(() => {
+		return () => clearTimeout(timeoutAvancoRef.current);
+	}, []);
 
 	useEffect(() => {
 		async function carregarQuestoes() {
@@ -51,28 +62,58 @@ export default function SimuladoPage({
 	// atualizar a pagina (F5) continue de onde o usuario parou.
 	useEffect(() => {
 		if (resultado) return;
-		salvarProgresso(simuladoId, { indiceAtual, respostas });
-	}, [simuladoId, indiceAtual, respostas, resultado]);
+		salvarProgresso(simuladoId, { indiceAtual, respostasPorQuestao });
+	}, [simuladoId, indiceAtual, respostasPorQuestao, resultado]);
 
-	async function handleResponder(resposta) {
-		const novasRespostas = [...respostas, resposta];
-		setRespostas(novasRespostas);
+	function handleResponder(resposta) {
+		setRespostasPorQuestao((anterior) => ({
+			...anterior,
+			[resposta.questao_id]: resposta,
+		}));
 
-		if (indiceAtual < questoes.length - 1) {
-			setIndiceAtual(indiceAtual + 1);
-		} else {
-			try {
-				const payload = novasRespostas.map((r) => ({
-					questao_id: r.questao_id,
-					alternativa_escolhida: r.alternativa_escolhida,
-					tempo_resposta: r.tempo_resposta,
-				}));
-				const res = await submeterRespostas(simuladoId, payload);
-				setResultado(res);
-				limparProgresso(simuladoId);
-			} catch (err) {
-				setErro(err.message);
-			}
+		// Avanca automaticamente apos confirmar, dando um instante para ver o
+		// feedback (certo/errado). Se o usuario ja tiver navegado manualmente
+		// nesse meio-tempo, respeita a posicao atual em vez de pular por cima.
+		const indiceRespondido = indiceAtual;
+		timeoutAvancoRef.current = setTimeout(() => {
+			setIndiceAtual((atual) => {
+				if (atual !== indiceRespondido) return atual;
+				return Math.min(questoes.length - 1, atual + 1);
+			});
+		}, 1200);
+	}
+
+	function handleVoltar() {
+		setIndiceAtual((i) => Math.max(0, i - 1));
+	}
+
+	function handleAvancar() {
+		setIndiceAtual((i) => Math.min(questoes.length - 1, i + 1));
+	}
+
+	async function handleFinalizar() {
+		const respostas = Object.values(respostasPorQuestao);
+		if (respostas.length === 0) return;
+		if (
+			respostas.length < questoes.length &&
+			!confirm(
+				`Voce respondeu ${respostas.length} de ${questoes.length} questoes. ` +
+					"As nao respondidas contarao como erradas. Finalizar mesmo assim?",
+			)
+		) {
+			return;
+		}
+		try {
+			const payload = respostas.map((r) => ({
+				questao_id: r.questao_id,
+				alternativa_escolhida: r.alternativa_escolhida,
+				tempo_resposta: r.tempo_resposta,
+			}));
+			const res = await submeterRespostas(simuladoId, payload);
+			setResultado(res);
+			limparProgresso(simuladoId);
+		} catch (err) {
+			setErro(err.message);
 		}
 	}
 
@@ -113,11 +154,22 @@ export default function SimuladoPage({
 	}
 
 	if (resultado) {
-		const tempoTotal = respostas.reduce(
+		// Ordem das questoes do simulado, nao a ordem em que foram respondidas.
+		const respostasOrdenadas = questoes
+			.map((q) => respostasPorQuestao[q.id])
+			.filter(Boolean);
+		const tempoTotal = respostasOrdenadas.reduce(
 			(acc, r) => acc + (r.tempo_resposta || 0),
 			0,
 		);
-		const tempoMedio = respostas.length > 0 ? tempoTotal / respostas.length : 0;
+		const tempoMedio =
+			respostasOrdenadas.length > 0
+				? tempoTotal / respostasOrdenadas.length
+				: 0;
+		const respondidas = resultado.respondidas ?? respostasOrdenadas.length;
+		const incompleto = respondidas < resultado.total_questoes;
+		const taxaNasRespondidas =
+			respondidas > 0 ? (resultado.acertos / respondidas) * 100 : 0;
 
 		return (
 			<div className="max-w-2xl mx-auto p-6">
@@ -130,7 +182,7 @@ export default function SimuladoPage({
 
 				<div className="bg-[var(--cor-painel)] border border-[var(--cor-borda)] rounded-2xl p-8 text-center mb-8">
 					<div
-						className="text-6xl font-bold mb-4"
+						className="text-6xl font-bold mb-2"
 						style={{
 							color:
 								resultado.nota >= 60 ? "var(--cor-acerto)" : "var(--cor-erro)",
@@ -138,11 +190,30 @@ export default function SimuladoPage({
 					>
 						{resultado.nota?.toFixed(1)}%
 					</div>
-					<p className="text-xl text-gray-300 mb-6">
+					<p className="text-xs text-gray-500 mb-4">
+						Nota estilo ENADE — questoes nao respondidas contam como erro
+					</p>
+					<p className="text-xl text-gray-300 mb-2">
 						{resultado.acertos} de {resultado.total_questoes} questoes corretas
 					</p>
 
-					<div className="grid grid-cols-3 gap-4 text-center">
+					{incompleto && (
+						<div className="bg-amber-900/20 border border-amber-500/30 rounded-lg px-4 py-3 mt-4 mb-2 text-left">
+							<p className="text-amber-300 text-sm font-bold mb-1">
+								Simulado finalizado antes do fim ({respondidas} de{" "}
+								{resultado.total_questoes} respondidas)
+							</p>
+							<p className="text-amber-100/80 text-sm">
+								Nas questoes que voce de fato respondeu, seu acerto foi{" "}
+								<strong>{taxaNasRespondidas.toFixed(1)}%</strong>. A nota acima
+								segue o criterio real do ENADE, em que deixar em branco conta
+								como erro — por isso pode parecer mais baixa do que o quanto
+								voce realmente acertou.
+							</p>
+						</div>
+					)}
+
+					<div className="grid grid-cols-3 gap-4 text-center mt-6">
 						<div className="bg-[var(--cor-fundo)] rounded-xl p-4">
 							<div className="text-2xl font-bold text-[var(--cor-destaque)]">
 								{resultado.acertos}
@@ -166,7 +237,7 @@ export default function SimuladoPage({
 				</div>
 
 				<div className="space-y-2 mb-8">
-					{respostas.map((r, i) => (
+					{respostasOrdenadas.map((r, i) => (
 						<div
 							key={r.questao_id}
 							className={`flex items-center justify-between p-3 rounded-lg ${
@@ -201,19 +272,49 @@ export default function SimuladoPage({
 		);
 	}
 
+	const respondidas = questoes.map((q) => Boolean(respostasPorQuestao[q.id]));
+	const totalRespondidas = respondidas.filter(Boolean).length;
+
 	return (
 		<div className="p-6">
-			<div className="flex items-center gap-4 mb-4">
-				<div className="flex-1 bg-[var(--cor-borda)] rounded-full h-2">
+			<div className="flex items-center gap-2 mb-4 flex-wrap">
+				<div className="flex-1 min-w-[120px] bg-[var(--cor-borda)] rounded-full h-2">
 					<div
 						className="bg-[var(--cor-destaque)] h-2 rounded-full transition-all duration-500"
-						style={{ width: `${((indiceAtual + 1) / questoes.length) * 100}%` }}
+						style={{ width: `${(totalRespondidas / questoes.length) * 100}%` }}
 					/>
 				</div>
 				<button
 					type="button"
+					onClick={handleVoltar}
+					disabled={indiceAtual === 0}
+					title="Questao anterior"
+					className="shrink-0 px-3 py-1.5 rounded-lg border-2 border-[var(--cor-borda)] text-gray-300 text-xs font-bold hover:border-gray-500 transition-colors cursor-pointer disabled:opacity-30 disabled:cursor-not-allowed"
+				>
+					◀ Voltar
+				</button>
+				<button
+					type="button"
+					onClick={handleAvancar}
+					disabled={indiceAtual === questoes.length - 1}
+					title="Proxima questao"
+					className="shrink-0 px-3 py-1.5 rounded-lg border-2 border-[var(--cor-borda)] text-gray-300 text-xs font-bold hover:border-gray-500 transition-colors cursor-pointer disabled:opacity-30 disabled:cursor-not-allowed"
+				>
+					Avancar ▶
+				</button>
+				<button
+					type="button"
+					onClick={handleFinalizar}
+					disabled={totalRespondidas === 0}
+					title="Envia as respostas e mostra o resultado"
+					className="shrink-0 px-4 py-1.5 rounded-lg border-2 border-[var(--cor-acerto)]/60 text-[var(--cor-acerto)] text-xs font-bold uppercase tracking-wider hover:bg-[var(--cor-acerto)]/10 transition-colors cursor-pointer disabled:opacity-30 disabled:cursor-not-allowed"
+				>
+					Finalizar
+				</button>
+				<button
+					type="button"
 					onClick={handleParar}
-					title="Encerra o simulado e volta para o dashboard"
+					title="Encerra por agora e volta para o dashboard (pode continuar depois)"
 					className="shrink-0 px-4 py-1.5 rounded-lg border-2 border-red-500/50 text-red-300 text-xs font-bold uppercase tracking-wider hover:bg-red-900/30 transition-colors cursor-pointer"
 				>
 					Parar
@@ -223,6 +324,8 @@ export default function SimuladoPage({
 				questao={questoes[indiceAtual]}
 				numero={indiceAtual + 1}
 				total={questoes.length}
+				respostaSalva={respostasPorQuestao[questoes[indiceAtual].id] ?? null}
+				respondidas={respondidas}
 				onResponder={handleResponder}
 			/>
 		</div>
