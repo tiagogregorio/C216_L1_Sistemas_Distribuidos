@@ -110,9 +110,12 @@ export default function DashboardPage() {
 						{[...dados.desempenho_por_assunto]
 							.sort((a, b) => b.taxa - a.taxa)
 							.map((item) => (
-								<div key={item.assunto} className="flex items-center gap-4">
+								<div
+									key={item.assunto || "sem-assunto"}
+									className="flex items-center gap-4"
+								>
 									<span className="w-40 shrink-0 text-sm truncate">
-										{item.assunto}
+										{item.assunto || "Sem assunto"}
 									</span>
 									<div className="flex-1 bg-[var(--cor-fundo)] rounded-full h-6 overflow-hidden">
 										<div
@@ -153,7 +156,10 @@ export default function DashboardPage() {
 								</p>
 								<p className="text-amber-100/80 text-sm">
 									{fracos
-										.map((item) => `${item.assunto} (${item.taxa}%)`)
+										.map(
+											(item) =>
+												`${item.assunto || "Sem assunto"} (${item.taxa}%)`,
+										)
 										.join(", ")}{" "}
 									{fracos.length === 1
 										? "e onde voce mais precisa melhorar."

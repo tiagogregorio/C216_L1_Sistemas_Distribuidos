@@ -187,11 +187,16 @@ make test
 # Backend (79 testes Pytest: unitarios + integracao)
 make test-back
 
-# Frontend (36 testes Vitest + Testing Library)
+# Frontend (39 testes Vitest + Testing Library)
 cd frontend && npx vitest run
 
-# E2E com Playwright
-cd frontend && npx playwright test
+# E2E com Playwright (5 testes; requer a aplicacao rodando via Docker Compose em
+# localhost:3000, com migracoes e seed aplicados). Inclui o teste de persistencia
+# real: cadastra uma questao pela interface, recarrega, confere na API e remove.
+cd frontend
+npm ci
+npx playwright install chromium
+npx playwright test
 ```
 
 ## Importando questoes de novas provas (PDF)
@@ -279,7 +284,7 @@ O avaliador pode usar a propria chave da mesma forma.
 
 - Backend: `make test-back` (Pytest, SQLite em memoria nas fixtures) e lint `ruff check` + `ruff format --check`.
 - Frontend: `make test-front` (Vitest) e lint `biome check src/`.
-- E2E Playwright (`frontend/tests/e2e`): roda contra a aplicacao real em `localhost:3000` (Docker Compose ativo, com PostgreSQL); nao roda no CI por exigir a stack completa.
+- E2E Playwright (`frontend/tests/e2e`, 5 testes): rodam contra a aplicacao real em `localhost:3000` (Docker Compose ativo, com PostgreSQL), incluindo o teste de persistencia (frontend -> API -> banco). Nao rodam no CI por exigirem a stack completa. Para outro endereco: `E2E_BASE_URL` e `E2E_API_URL`.
 - GitHub Actions: `Backend CI` e `Frontend CI` rodam lint e testes em push e em Pull Request para `main`.
 
 ## Video de Demonstracao

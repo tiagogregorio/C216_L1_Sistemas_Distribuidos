@@ -71,14 +71,14 @@ export default function RelatorioPage() {
 					<ol className="space-y-2">
 						{dados.prioridades_de_estudo.map((item, i) => (
 							<li
-								key={item.assunto}
+								key={item.assunto || "sem-assunto"}
 								className="flex items-center justify-between bg-black/20 rounded-lg px-4 py-2"
 							>
 								<span className="text-sm">
 									<span className="text-amber-400 font-bold mr-2">
 										{i + 1}.
 									</span>
-									{item.assunto}
+									{item.assunto || "Sem assunto"}
 								</span>
 								<span className="text-sm font-mono text-amber-300">
 									{item.taxa}% ({item.acertos}/{item.total})

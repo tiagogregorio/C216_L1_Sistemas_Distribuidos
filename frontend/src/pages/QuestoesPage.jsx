@@ -1,6 +1,12 @@
 import { useCallback, useEffect, useState } from "react";
 import QuestaoForm from "../components/QuestaoForm";
-import { criarQuestao, listarQuestoes, removerQuestao } from "../services/api";
+import {
+	atualizarQuestao,
+	buscarQuestao,
+	criarQuestao,
+	listarQuestoes,
+	removerQuestao,
+} from "../services/api";
 import ImportarPdfPage from "./ImportarPdfPage";
 
 export default function QuestoesPage() {
@@ -9,6 +15,7 @@ export default function QuestoesPage() {
 	const [erro, setErro] = useState(null);
 	const [mostrarForm, setMostrarForm] = useState(false);
 	const [mostrarImportar, setMostrarImportar] = useState(false);
+	const [editando, setEditando] = useState(null);
 	const [filtroAno, setFiltroAno] = useState("");
 	const [filtroTipo, setFiltroTipo] = useState("");
 
@@ -35,6 +42,27 @@ export default function QuestoesPage() {
 	async function handleCriar(dados) {
 		await criarQuestao(dados);
 		setMostrarForm(false);
+		carregar();
+	}
+
+	async function handleEditar(id) {
+		setErro(null);
+		try {
+			// A listagem e resumida; busca a questao completa para preencher o form.
+			const completa = await buscarQuestao(id);
+			setEditando(completa);
+			setMostrarForm(false);
+			setMostrarImportar(false);
+		} catch (err) {
+			setErro(err.message);
+		}
+	}
+
+	async function handleAtualizar(dados) {
+		// Envia so os campos editaveis (sem id nem a pagina original do PDF).
+		const { id: _id, pagina_original: _pagina, ...editaveis } = dados;
+		await atualizarQuestao(editando.id, editaveis);
+		setEditando(null);
 		carregar();
 	}
 
@@ -88,6 +116,28 @@ export default function QuestoesPage() {
 						carregar();
 					}}
 				/>
+			)}
+
+			{editando && (
+				<div className="bg-[var(--cor-painel)] border border-[var(--cor-destaque)] rounded-xl p-6 mb-6">
+					<div className="flex items-center justify-between mb-4">
+						<h2 className="text-lg font-bold">
+							Editar Questao ({editando.ano} - Q{editando.numero})
+						</h2>
+						<button
+							type="button"
+							onClick={() => setEditando(null)}
+							className="text-gray-400 hover:text-white text-sm cursor-pointer"
+						>
+							Cancelar
+						</button>
+					</div>
+					<QuestaoForm
+						key={editando.id}
+						inicial={editando}
+						onSubmit={handleAtualizar}
+					/>
+				</div>
 			)}
 
 			{mostrarForm && (
@@ -175,13 +225,22 @@ export default function QuestoesPage() {
 									<span className="text-xs text-gray-500">{q.assunto}</span>
 								)}
 							</div>
-							<button
-								type="button"
-								onClick={() => handleRemover(q.id)}
-								className="text-red-400 hover:text-red-300 text-sm cursor-pointer"
-							>
-								Remover
-							</button>
+							<div className="flex items-center gap-4">
+								<button
+									type="button"
+									onClick={() => handleEditar(q.id)}
+									className="text-[var(--cor-destaque)] hover:brightness-125 text-sm cursor-pointer"
+								>
+									Editar
+								</button>
+								<button
+									type="button"
+									onClick={() => handleRemover(q.id)}
+									className="text-red-400 hover:text-red-300 text-sm cursor-pointer"
+								>
+									Remover
+								</button>
+							</div>
 						</div>
 					))}
 				</div>
