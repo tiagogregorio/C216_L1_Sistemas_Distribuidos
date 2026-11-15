@@ -1,11 +1,12 @@
 """Rotas REST do recurso questoes."""
 
-from fastapi import APIRouter, Depends, HTTPException, Query
+from fastapi import APIRouter, Depends, File, Form, HTTPException, Query, UploadFile
 from sqlalchemy.orm import Session
 
 from app.database.session import get_db
 from app.repositories.questao import QuestaoRepository
 from app.schemas.questao import (
+    ClassificacaoLote,
     EstatisticasQuestao,
     QuestaoCreate,
     QuestaoResponse,
@@ -14,8 +15,13 @@ from app.schemas.questao import (
 )
 from app.services.assistente_ia import (
     AssistenteIAIndisponivelError,
+    classificar_lote,
     explicar_questao,
+    ia_configurada,
+    modelo_ia,
+    testar_conexao,
 )
+from app.services.importacao_pdf import processar_pdf
 from app.services.questoes import QuestaoNaoEncontradaError, QuestaoService
 
 router = APIRouter(prefix="/questoes", tags=["Questoes"])
@@ -88,6 +94,54 @@ def estatisticas_questao(
         raise HTTPException(status_code=404, detail=str(e))
 
 
+@router.post("/importar-pdf")
+async def importar_pdf(
+    arquivo: UploadFile = File(...),
+    ano: int = Form(...),
+    inicio_ce: int = Form(1),
+):
+    """Extrai um rascunho de questoes de um PDF para revisao na interface.
+
+    Nao salva nada no banco: devolve as questoes candidatas (para o
+    usuario editar e aprovar uma a uma) e miniaturas de cada pagina (para
+    localizar figuras que precisem ser anexadas manualmente).
+    """
+    if arquivo.content_type != "application/pdf":
+        raise HTTPException(status_code=422, detail="Envie um arquivo PDF.")
+
+    conteudo = await arquivo.read()
+    try:
+        return processar_pdf(conteudo, ano=ano, inicio_ce=inicio_ce)
+    except Exception as e:
+        raise HTTPException(
+            status_code=422, detail=f"Nao foi possivel processar o PDF: {e}"
+        )
+
+
+@router.get("/ia/status")
+async def status_ia(testar: bool = False):
+    """Informa se a IA (Gemini) esta configurada, sem expor a chave.
+
+    Com ?testar=true faz uma chamada minima ao Gemini para diagnosticar
+    chave invalida, modelo inexistente ou limite de uso.
+    """
+    resposta = {"configurada": ia_configurada(), "modelo": modelo_ia()}
+    if testar and resposta["configurada"]:
+        resposta["teste"] = await testar_conexao()
+    return resposta
+
+
+@router.post("/classificar-lote")
+async def classificar_questoes_em_lote(dados: ClassificacaoLote):
+    """Pede ao Gemini assunto e dificuldade de varias questoes de uma vez
+    (usado na tela de importacao de PDF, antes de salvar)."""
+    try:
+        resultados = await classificar_lote([q.model_dump() for q in dados.questoes])
+    except AssistenteIAIndisponivelError as e:
+        raise HTTPException(status_code=503, detail=str(e))
+    return {"resultados": resultados}
+
+
 @router.post("/{questao_id}/assistente-ia")
 async def assistente_ia_questao(
     questao_id: int,
@@ -107,7 +161,12 @@ async def assistente_ia_questao(
     return {"explicacao": explicacao}
 
 
-@router.post("/", response_model=QuestaoResponse, status_code=201)
+@router.post(
+    "/",
+    response_model=QuestaoResponse,
+    response_model_exclude={"pagina_original"},
+    status_code=201,
+)
 def criar_questao(
     dados: QuestaoCreate,
     service: QuestaoService = Depends(get_questao_service),
@@ -119,7 +178,11 @@ def criar_questao(
         raise HTTPException(status_code=422, detail=str(e))
 
 
-@router.put("/{questao_id}", response_model=QuestaoResponse)
+@router.put(
+    "/{questao_id}",
+    response_model=QuestaoResponse,
+    response_model_exclude={"pagina_original"},
+)
 def substituir_questao(
     questao_id: int,
     dados: QuestaoCreate,
@@ -135,7 +198,11 @@ def substituir_questao(
         raise HTTPException(status_code=422, detail=str(e))
 
 
-@router.patch("/{questao_id}", response_model=QuestaoResponse)
+@router.patch(
+    "/{questao_id}",
+    response_model=QuestaoResponse,
+    response_model_exclude={"pagina_original"},
+)
 def atualizar_questao(
     questao_id: int,
     dados: QuestaoUpdate,

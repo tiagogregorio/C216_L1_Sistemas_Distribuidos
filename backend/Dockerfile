@@ -2,6 +2,12 @@ FROM python:3.12-slim
 
 WORKDIR /app
 
+# poppler-utils fornece pdftotext/pdftoppm, usados por app/tools/extrair_enade.py
+# para importar questoes de provas do ENADE a partir de PDF.
+RUN apt-get update \
+    && apt-get install -y --no-install-recommends poppler-utils \
+    && rm -rf /var/lib/apt/lists/*
+
 RUN pip install --no-cache-dir poetry
 
 COPY pyproject.toml poetry.lock* ./
