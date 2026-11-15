@@ -52,9 +52,23 @@ def test_origem_nao_permitida_nao_recebe_cors():
 
 
 def test_o_app_real_usa_o_tratamento():
+    """Comportamento (nao a estrutura interna do Starlette, que muda entre versoes)."""
+    from fastapi.testclient import TestClient
+
+    from app.core.config import CORS_ORIGINS
     from app.main import app
 
-    assert Exception in app.exception_handlers
+    @app.get("/__teste_erro_500__")
+    def rota_que_quebra():
+        raise RuntimeError("falha de teste")
+
+    origem = CORS_ORIGINS[0]
+    cliente = TestClient(app, raise_server_exceptions=False)
+    resposta = cliente.get("/__teste_erro_500__", headers={"Origin": origem})
+
+    assert resposta.status_code == 500
+    assert resposta.headers["access-control-allow-origin"] == origem
+    assert "RuntimeError" in resposta.json()["detail"]
 
 
 @pytest.mark.parametrize("numero", [1])
