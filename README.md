@@ -108,7 +108,7 @@ db (PostgreSQL 16, volume postgres_data, esquema versionado pelo Alembic)
 ## Pre-requisitos
 
 - Docker e Docker Compose
-- GNU Make (no Windows, use o **Git Bash** ou o WSL para os comandos `make`)
+- GNU Make (no Windows, os comandos `make` funcionam no PowerShell e no Git Bash)
 - Node.js 22+ (apenas para rodar os testes do frontend e os testes E2E)
 
 ## Variaveis de ambiente
@@ -175,7 +175,7 @@ Depois, dentro da pasta `frontend`, o comando `npm run dev` inicia o Vite com re
 
 ## Comandos do Makefile
 
-`make help` lista todos os comandos. Cada um e um atalho para um comando `docker compose` ou `npx`.
+`make help` lista todos os comandos. Cada um e um atalho para um comando `docker compose` ou `npm`.
 
 | Comando                   | O que faz                                                    |
 |---------------------------|--------------------------------------------------------------|
@@ -338,7 +338,7 @@ Na pagina **Questoes**, o botao **Importar PDF** envia a prova ao backend, que e
 
 - **"relation ... does not exist" na tela**: as migracoes nao foram aplicadas. Rode `make db-upgrade`.
 - **Porta em uso (3000, 5432 ou 8000)**: outro projeto Docker Compose esta usando as mesmas portas. Pare-o com `docker compose -p <nome-do-projeto> down` antes de `make up`.
-- **`make` nao encontrado no Windows**: use o Git Bash ou o WSL. No PowerShell, os comandos equivalentes estao na coluna "O que faz" da tabela do Makefile (por exemplo, `docker compose up -d --build`).
+- **`make` nao encontrado no Windows**: instale o GNU Make ou use o WSL. Os comandos equivalentes estao na coluna "O que faz" da tabela do Makefile (por exemplo, `docker compose up -d --build`).
 - **Windows PowerShell 5.1**: o operador `&&` nao existe; rode um comando por linha.
 - **Mensagem "Nao foi possivel falar com o servidor"**: confira com `make ps` e `make logs` se o backend esta de pe.
 
