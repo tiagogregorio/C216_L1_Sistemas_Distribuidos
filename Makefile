@@ -3,6 +3,14 @@ COMPOSE = docker compose
 # (Linux, macOS, Git Bash no Windows e CI).
 EXEC = $(COMPOSE) exec -T
 
+# No Windows, "npm" sem extensao e um script bash; "npm.cmd" funciona tanto no
+# PowerShell quanto no Git Bash. Nos demais sistemas o comando e so "npm".
+ifeq ($(OS),Windows_NT)
+NPM = npm.cmd
+else
+NPM = npm
+endif
+
 .PHONY: help setup env up down down-v build restart logs ps \
         back-sh db-sh front-sh db-upgrade db-downgrade db-history db-current db-ultimas \
         seed seed-2023 fix-q10-2023 limpar-lixo duplicadas remover-duplicadas \
@@ -89,10 +97,10 @@ remover-duplicadas: ## Remove duplicadas sem simulado (mantem a mais antiga)
 
 # === Qualidade ===
 front-install: ## Instala as dependencias do frontend (npm ci)
-	cd frontend && npm ci
+	$(NPM) --prefix frontend ci
 
 e2e-install: ## Instala o navegador usado pelo Playwright
-	cd frontend && npx playwright install chromium
+	$(NPM) --prefix frontend run e2e:install
 
 test: test-back test-front ## Roda os testes do backend e do frontend
 
@@ -100,18 +108,18 @@ test-back: ## Roda testes do backend (Pytest, dentro do container)
 	$(EXEC) backend pytest
 
 test-front: ## Roda testes do frontend (Vitest) - requer make front-install
-	cd frontend && npx vitest run
+	$(NPM) --prefix frontend run test
 
 test-e2e: ## Roda os testes E2E (Playwright) contra a aplicacao em localhost:3000
-	cd frontend && npx playwright test
+	$(NPM) --prefix frontend run test:e2e
 
 lint: ## Verifica lint e formatacao: Ruff (backend) e Biome (frontend)
 	$(EXEC) backend ruff check --exclude alembic .
 	$(EXEC) backend ruff format --check --exclude alembic .
-	cd frontend && npx @biomejs/biome check src/
+	$(NPM) --prefix frontend run lint
 
 format: ## Formata o codigo: Ruff (backend) e Biome (frontend)
 	$(EXEC) backend ruff format --exclude alembic .
-	cd frontend && npx @biomejs/biome check --write src/
+	$(NPM) --prefix frontend run format
 
 check-all: lint test ## Roda lint e testes
