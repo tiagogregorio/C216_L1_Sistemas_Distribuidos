@@ -36,6 +36,17 @@ def reset_db():
     Base.metadata.drop_all(bind=engine)
 
 
+@pytest.fixture(autouse=True)
+def sem_chave_de_ia(monkeypatch):
+    """Os testes nunca usam a chave real do Gemini.
+
+    O container do backend pode ter GEMINI_API_KEY definida no .env; sem este
+    isolamento, os testes fariam chamadas reais a API externa e o resultado
+    dependeria do ambiente. Testes que precisam de uma chave definem uma falsa.
+    """
+    monkeypatch.setattr("app.services.assistente_ia.GEMINI_API_KEY", "", raising=False)
+
+
 @pytest.fixture()
 def client():
     return TestClient(app)

@@ -38,15 +38,15 @@ test.describe("Fluxo completo da plataforma ENADE", () => {
 		await page.getByRole("spinbutton").fill("5");
 		await page.getByRole("button", { name: "Iniciar Simulado" }).click();
 
-		await page.waitForSelector("text=ENADE", { timeout: 5000 });
+		// O simulado foi criado pela API e a primeira questao esta na tela.
+		await expect(page.getByText("Pergunta 1 de 5")).toBeVisible();
 
 		for (let i = 0; i < 5; i++) {
+			await expect(page.getByText(`Pergunta ${i + 1} de 5`)).toBeVisible();
 			await page.locator("button:has-text('1')").first().click();
 			await page.getByRole("button", { name: "CONFIRMAR RESPOSTA" }).click();
 			await expect(page.getByText(/RESPOSTA CERTA|ERROU/)).toBeVisible();
-			if (i < 4) {
-				await page.getByRole("button", { name: "Avancar ▶" }).click();
-			}
+			// Depois de confirmar, a aplicacao avanca sozinha para a proxima.
 		}
 
 		await page.getByRole("button", { name: "Finalizar" }).click();
@@ -64,12 +64,11 @@ test.describe("Fluxo completo da plataforma ENADE", () => {
 		await page.getByPlaceholder("Ex: Revisao ENADE 2019").fill("E2E Revisao");
 		await page.getByRole("spinbutton").fill("3");
 		await page.getByRole("button", { name: "Iniciar Simulado" }).click();
-		await page.waitForSelector("text=ENADE", { timeout: 5000 });
+		await expect(page.getByText("Pergunta 1 de 3")).toBeVisible();
 
-		// Responde a primeira questao e avanca.
+		// Responde a primeira questao; a aplicacao avanca sozinha.
 		await page.locator("button:has-text('1')").first().click();
 		await page.getByRole("button", { name: "CONFIRMAR RESPOSTA" }).click();
-		await page.getByRole("button", { name: "Avancar ▶" }).click();
 
 		await expect(page.getByText("Pergunta 2 de 3")).toBeVisible();
 
