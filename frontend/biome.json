@@ -1,0 +1,17 @@
+{
+	"$schema": "https://biomejs.dev/schemas/2.6.6/schema.json",
+	"assist": {
+		"actions": {
+			"source": { "organizeImports": "on" }
+		}
+	},
+	"linter": {
+		"rules": {
+			"a11y": { "noLabelWithoutControl": "off" },
+			"correctness": { "useExhaustiveDependencies": "off" },
+			"suspicious": { "noArrayIndexKey": "off" }
+		}
+	},
+	"formatter": { "indentStyle": "tab" },
+	"vcs": { "enabled": true, "clientKind": "git", "useIgnoreFile": true }
+}
