@@ -73,7 +73,8 @@ export default function App() {
 				{pagina !== "simulado" && (
 					<Navbar pagina={pagina} setPagina={setPagina} />
 				)}
-				<main>
+				{/* pb-24: espaco para o controle de som fixo nao cobrir os botoes da ultima linha */}
+				<main className="pb-24">
 					{pagina === "dashboard" && <DashboardPage />}
 					{pagina === "questoes" && <QuestoesPage />}
 					{pagina === "novo-simulado" && (
